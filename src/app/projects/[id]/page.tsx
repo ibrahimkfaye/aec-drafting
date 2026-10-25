@@ -10,6 +10,9 @@ import { PageShell } from "@/app/page-shell";
 import { StatusButton } from "./status-button";
 import { FilesSection } from "./files/files-section";
 import { listSources } from "@/lib/sources";
+import { deployEnv } from "@/lib/server-env";
+
+const runnerIsLocal = () => deployEnv() === "local" && (process.env.JOB_RUNNER ?? "local") === "local";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -87,6 +90,8 @@ async function ProjectDetail({ params }: Props) {
         members={members}
         canUpload={canEdit}
         archived={archived}
+        currentUserId={m.user.id}
+        localRunner={runnerIsLocal()}
       />
 
       <section className="flex flex-col gap-2">

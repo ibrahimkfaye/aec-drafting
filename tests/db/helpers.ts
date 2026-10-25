@@ -75,3 +75,20 @@ export async function insertProject(c: PoolClient, input: Record<string, unknown
   const { rows } = await c.query(sql, Object.values(input));
   return rows[0];
 }
+
+/** Run as Supabase's server-side service role (what the background worker uses). */
+export async function asService<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+  const c = await pool.connect();
+  try {
+    await c.query("begin");
+    await c.query("set local role service_role");
+    const out = await fn(c);
+    await c.query("commit");
+    return out;
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  } finally {
+    c.release();
+  }
+}

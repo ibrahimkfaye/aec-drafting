@@ -25,7 +25,9 @@ replace professional judgment.
 | DOCX | Docxtemplater (+ licensed image module if required) | 4 | |
 | PDF | Gotenberg in a private container | 4 | |
 | Tests | Vitest (unit + DB policy), Playwright (E2E) | 1+ | |
-| Hosting | Vercel (web) + private container host (workers) | 5 | Nothing deployed yet. |
+| Hosting | Vercel (web app only) | 5 | Nothing deployed yet. See "Deployment". |
+| Background jobs | Trigger.dev (preview/production); local runner for dev only | 1.8c | Task code written; no Trigger.dev project yet. |
+| PDF conversion | Gotenberg as a private, authenticated container | 4 | Called only from Trigger.dev tasks. Host not chosen. |
 
 No vector database, no embeddings, no second primary database, no no-code platform.
 Retrieval starts with SQL + Postgres full-text search.
@@ -90,14 +92,65 @@ Files never pass through the app server (Vercel limits request bodies to ~4.5 MB
 2. **Upload** (browser → Supabase Storage, private bucket `project-files`). Storage RLS
    allows the write only to that exact path, only by the uploader, only while `uploading`.
    No update/delete policies: originals cannot be overwritten or removed by users.
-3. **Finish** (server action): downloads the stored bytes, checks size, file signature
-   (PDF/PNG/JPEG) or UTF-8 text validity, computes SHA-256, then calls
-   `complete_source_upload()` → `stored` or `blocked`. Blocked bytes are unreadable.
+3. **Verify** (background job, since 1.8c): the server action records a `processing_jobs` row
+   and hands it to the runner, returning the job id. The worker (service role) re-reads the
+   stored bytes, checks size, file signature (PDF/PNG/JPEG) or UTF-8 text validity, computes
+   SHA-256, then calls `worker_finish_upload()` → `stored` or `blocked`. Users cannot call the
+   worker functions. Blocked bytes are unreadable. Failed jobs can be retried by the uploader.
 
 Downloads go through `/projects/:id/files/:versionId`, which re-checks the user and
 redirects to a signed URL valid for 60 seconds with `Content-Disposition: attachment`.
 
 Known gaps: see ASSUMPTIONS.md S-01…S-04.
+
+## Deployment (decided 2026-10-25; nothing provisioned yet)
+
+Vercel hosts **only** the Next.js app. Its limits shape the design (Vercel docs, checked 2026-10-25):
+request **and** response bodies are capped at **4.5 MB** per Function call; Function duration
+is 300 s by default (800 s max on Pro); the **Hobby plan is for non-commercial personal use only**.
+
+| Concern | Where it runs | Rule |
+|---|---|---|
+| Pages, server actions, authorization | Vercel Functions | Every check server-side; RLS as second layer. |
+| File upload | Browser → Supabase Storage (signed one-time URL) | Bytes never pass through Vercel. |
+| File download | Vercel Function checks access → 303 redirect to 60 s signed Storage URL | Bytes never pass through Vercel. |
+| Content verification, OCR, extraction, drafting, DOCX assembly | Trigger.dev tasks | App records a `processing_jobs` row, hands off, returns the **job id**; UI polls status. |
+| DOCX → PDF | Gotenberg (private container, basic auth, no public route) | Called only from Trigger.dev tasks, never from Vercel or browsers. |
+
+### Credentials by location (privileged keys never reach browsers or Vercel)
+
+| Secret | Local (.env.local) | Vercel (server env) | Trigger.dev (env vars) |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ✅ | ✅ | — |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (service role) | ✅ local stack only | ❌ **refused at runtime** | ✅ |
+| `TRIGGER_SECRET_KEY` | optional | ✅ (trigger-only key) | — |
+| `ANTHROPIC_API_KEY`, `AZURE_DOCINTEL_KEY` (later) | mock by default | ❌ | ✅ |
+| `GOTENBERG_URL` + basic-auth credentials (later) | local container | ❌ | ✅ |
+
+`src/lib/server-env.ts` enforces: no local job runner on Vercel; no Supabase secret key on
+Vercel; no Vercel deployment pointed at a local Supabase URL. Unit-tested.
+
+### Environment separation (no shared data or credentials)
+
+| | Development | Preview | Production |
+|---|---|---|---|
+| Web | `npm run dev` on your Mac | Vercel Preview deployments (protected with Vercel Authentication) | Vercel Production |
+| Database/Storage/Auth | Local Supabase (Docker) | Separate **staging** Supabase project, SYNTHETIC data only | Separate **production** Supabase project |
+| Jobs | Local runner (labeled in UI) | Trigger.dev **staging** environment | Trigger.dev **prod** environment |
+| Email | Local test inbox | Staging SMTP sender | Production SMTP sender |
+| AI / OCR | Mock adapters | Mock, or live only with explicit approval | Live after approval |
+
+Migrations are applied to staging first, then production, never edited after applying.
+
+### Paid/approval-required items (NOT provisioned — needs your decision)
+
+1. **Vercel plan:** Hobby forbids commercial use, so a pilot with a paying firm needs Pro
+   (currently $20 per developer seat/month per Vercel's docs; Pro trial available).
+2. **Supabase staging + production projects:** plan, region, backup coverage to be confirmed at provisioning.
+3. **Trigger.dev project:** plan and pricing to be confirmed at provisioning.
+4. **Gotenberg host** (Phase 4): private container host to be chosen.
+5. **Transactional email (SMTP)** for magic links (U-06).
+6. **Malware scanning service** (U-04).
 
 ## Backups (to be completed in Phase 5)
 

@@ -3,6 +3,9 @@
  * Uploaded files are DATA. Nothing here executes, renders, or interprets them.
  */
 
+/** Private Supabase Storage bucket for project originals (created by migration 0003). */
+export const BUCKET = "project-files";
+
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // keep in sync with migration 0003 + bucket limit
 
 export type DetectedType = "pdf" | "png" | "jpeg" | "text";

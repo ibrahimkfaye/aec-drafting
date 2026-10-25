@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { BlockReason, DetectedType } from "@/lib/files";
 
-export const BUCKET = "project-files";
+export { BUCKET } from "@/lib/files";
 
 export type SourceVersionRow = {
   id: string;
@@ -19,6 +19,8 @@ export type SourceVersionRow = {
   storage_path: string | null;
   /** True when an upload never finished (its one-time upload URL has expired). */
   incomplete?: boolean;
+  /** Latest background verification job for this version, if any. */
+  job?: { id: string; status: "queued" | "running" | "succeeded" | "failed"; error_code: string | null; runner: string } | null;
 };
 
 const STALE_UPLOAD_MS = 2 * 60 * 60 * 1000; // signed upload URLs expire after 2 hours
@@ -30,7 +32,7 @@ const COLUMNS =
 
 export async function listSources(orgId: string, projectId: string): Promise<SourceWithVersions[]> {
   const supabase = await createClient();
-  const [{ data: sources, error: e1 }, { data: versions, error: e2 }] = await Promise.all([
+  const [{ data: sources, error: e1 }, { data: versions, error: e2 }, { data: jobs, error: e3 }] = await Promise.all([
     supabase.from("sources").select("id, title, created_at").eq("org_id", orgId).eq("project_id", projectId).order("created_at"),
     supabase
       .from("source_versions")
@@ -38,8 +40,15 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
       .eq("org_id", orgId)
       .eq("project_id", projectId)
       .order("version_number", { ascending: false }),
+    supabase
+      .from("processing_jobs")
+      .select("id, subject_id, status, error_code, runner")
+      .eq("org_id", orgId)
+      .eq("project_id", projectId)
+      .eq("kind", "verify_upload"),
   ]);
-  if (e1 || e2) throw new Error("Could not load project files.");
+  if (e1 || e2 || e3) throw new Error("Could not load project files.");
+  const jobBySubject = new Map((jobs ?? []).map((j) => [j.subject_id, j]));
   return (sources ?? []).map((s) => ({
     ...s,
     versions: (versions as SourceVersionRow[])
@@ -47,6 +56,7 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
       .map((v) => ({
         ...v,
         incomplete: v.status === "uploading" && Date.now() - new Date(v.created_at).getTime() > STALE_UPLOAD_MS,
+        job: jobBySubject.get(v.id) ?? null,
       })),
   }));
 }

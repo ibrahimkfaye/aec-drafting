@@ -36,6 +36,6 @@ export async function upload(page: Page, name: string, buffer: Buffer, mimeType:
   if (asVersionOf) await page.getByLabel("Upload as", { exact: true }).selectOption({ label: `New version of: ${asVersionOf}` });
   await page.getByRole("button", { name: "Upload" }).click();
   const status = page.getByTestId("upload-status");
-  await expect(status).toHaveText(/^(Stored|Blocked|The |Your |This |Choose)/, { timeout: 30_000 });
+  await expect(status).toHaveText(/^(Stored|Blocked|The |Your |This |Choose|Verification failed|Still verifying|Background processing)/, { timeout: 30_000 });
   return status;
 }

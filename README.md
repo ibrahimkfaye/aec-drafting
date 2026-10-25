@@ -92,6 +92,14 @@ npm run test:db
 Both test modes **refuse** to run against anything other than `localhost`.
 The shim mode drops and recreates a database named `*_test` each run.
 
+## Background jobs
+
+File verification (and later OCR, extraction, drafting and export) runs as background
+jobs, never inside a web request. Locally they run inside `npm run dev`, and the project page
+shows **"LOCAL DEVELOPMENT RUNNER"**. On Vercel they must run on Trigger.dev; the app refuses
+to use the local runner there. No Trigger.dev project exists yet — see `docs/ARCHITECTURE.md`
+"Deployment" for what needs your approval before anything is deployed.
+
 ## Database migrations
 
 SQL migrations live in `supabase/migrations/` and are applied in filename order.

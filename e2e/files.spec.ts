@@ -18,6 +18,8 @@ const EXE = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
 test("author uploads PDF, PNG and text; they are stored, not scanned, and downloadable", async ({ page }) => {
   await signIn(page, "author@example.test");
   const p = await createProject(page);
+  // Local development makes it obvious that Trigger.dev is not in use.
+  await expect(page.getByTestId("local-runner-notice")).toBeVisible();
 
   await expect(await upload(page, "SYNTHETIC-survey.pdf", PDF, "application/pdf")).toHaveText("Stored: SYNTHETIC-survey.pdf");
   await expect(await upload(page, "SYNTHETIC-map.png", PNG, "image/png")).toHaveText("Stored: SYNTHETIC-map.png");
@@ -39,7 +41,8 @@ test("author uploads PDF, PNG and text; they are stored, not scanned, and downlo
   expect(Buffer.from(await res.body()).equals(PDF)).toBe(true);
   expect(res.url()).toContain("token="); // served via signed URL, not a public link
 
-  await expect(page.getByTestId("project-history")).toBeVisible();
+  // Each verification is a recorded background job.
+  await expect(page.getByTestId("project-history")).toContainText("Stored a file");
   expect(p.id).toBeTruthy();
 });
 

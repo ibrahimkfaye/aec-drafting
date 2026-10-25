@@ -33,6 +33,9 @@ Update this file whenever an assumption is confirmed or changed.
 | D-14 | Every approved fact needs ≥1 citation to a stored source version (page or section + excerpt). Editing creates a new candidate revision; prior approval stays only on the old revision. | No unsourced evidence; edits invalidate approval. |
 | D-15 | Reviewers may also propose and edit facts (their own revisions then need another reviewer). | Review screens need edit, per brief. |
 | D-16 | Gaps/conflicts: same separation of duties as facts (raiser can't close unless admin, flagged). Open gaps don't block drafting; they become explicit "information needed" markers. Facts in open conflicts and non-prevailing facts are excluded from snapshots. | Consistent with D-13; brief requires gaps to surface, not be filled. |
+| D-17 | Vercel hosts only the web app. No file bytes through Vercel Functions; verification/processing runs as Trigger.dev jobs with visible job ids; Gotenberg is a private container called only from jobs. | Founder directive 2026-10-25; Vercel 4.5 MB body limit. |
+| D-18 | The Supabase service-role key exists only in local dev and the Trigger.dev worker; the app refuses to run on Vercel if it is configured there. | Keeps privileged credentials out of request-handling code. |
+| D-19 | Dev / preview / production use separate Supabase projects, Trigger.dev environments and email senders; preview holds synthetic data only. | Founder directive. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)
@@ -43,13 +46,15 @@ Update this file whenever an assumption is confirmed or changed.
 | U-03 | Azure Document Intelligence model choice, region, data-retention terms. |
 | U-04 | Malware-scanning integration (required before live confidential use). |
 | U-06 | Production email sender (SMTP provider) for magic links — required before any hosted/pilot use. Local dev uses the built-in test inbox. |
+| U-07 | Trigger.dev: account, plan/pricing, region and data handling; whether its bundler resolves the `@/` path alias (worker code uses relative imports to avoid depending on it). | 
+| U-08 | Vercel Pro is required for commercial use (Hobby is non-commercial) — approval needed before any firm-facing deployment. |
 | U-05 | Supabase key naming: newer projects issue "publishable" and "secret" keys; confirm what your local CLI prints at milestone 1.3. |
 
 ## Security gaps to close before live confidential use
 | ID | Gap | Planned fix |
 |---|---|---|
 | S-01 | No malware scanning. Every file shows "Not scanned". | Choose scanner (U-04); scanner sets `scan_status` via service role; block processing until `clean`. |
-| S-02 | `complete_source_upload()` is callable by the uploading author directly (with their session), so a determined author could skip the app's content check. Size and existence are still enforced by the database. | Phase 2 processing worker re-verifies signature + SHA-256 independently before using any file. |
+| S-02 | ~~User-callable upload completion could skip the content check.~~ **Closed in 1.8c:** the function was dropped; only the service-role worker can finish uploads (tested). | — |
 | S-03 | Bytes of files blocked *after* upload remain in the private bucket (unreadable to users). | Phase 2 cleanup job deletes them via the Storage API. |
 | S-04 | Storage policies are tested on the shim; on real Supabase they are covered by end-to-end upload tests only. | Add Storage API-level tests in Phase 5. |
 

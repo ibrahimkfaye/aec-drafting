@@ -1,18 +1,19 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { z } from "zod";
 import { hasRole, requireMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { BLOCK_REASON_TEXT, checkContent, preflight, sanitizeFilename, type BlockReason } from "@/lib/files";
+import { BLOCK_REASON_TEXT, preflight, sanitizeFilename } from "@/lib/files";
 import { BUCKET, getVersion } from "@/lib/sources";
+import { jobRunner } from "@/lib/server-env";
+import { enqueueUploadVerification } from "@/lib/jobs/enqueue";
 
 export type StartResult =
   | { kind: "upload"; versionId: string; path: string; token: string; mime: string }
   | { kind: "blocked"; message: string }
   | { kind: "error"; message: string };
 
-export type FinishResult = { kind: "stored" } | { kind: "blocked"; message: string } | { kind: "error"; message: string };
+export type FinishResult = { kind: "queued"; jobId: string } | { kind: "error"; message: string; jobId?: string };
 
 const startSchema = z.object({
   projectId: z.uuid(),
@@ -62,51 +63,62 @@ export async function startUpload(input: z.input<typeof startSchema>): Promise<S
 }
 
 /**
- * Step 3 — after the browser has uploaded. Re-reads the STORED bytes (never
- * trusting the browser), checks size, signature and text validity, computes a
- * SHA-256 fingerprint, then marks the version stored or blocked.
+ * Step 3 — after the browser has uploaded. Does NOT read the file here (Vercel
+ * Functions must not carry large files). It records a verification job and hands
+ * it to the background runner, returning the job id for the UI to follow.
  */
-export async function finishUpload(input: { projectId: string; versionId: string }): Promise<FinishResult> {
+export async function requestVerification(input: { projectId: string; versionId: string }): Promise<FinishResult> {
   const m = await requireMembership();
+  if (!hasRole(m, ["admin", "author"])) return { kind: "error", message: "Your role cannot upload files." };
   const ids = z.object({ projectId: z.uuid(), versionId: z.uuid() }).safeParse(input);
   if (!ids.success) return { kind: "error", message: GENERIC };
 
-  const version = await getVersion(m.orgId, ids.data.projectId, ids.data.versionId);
-  if (!version || version.uploaded_by !== m.user.id || version.status !== "uploading" || !version.storage_path) {
-    return { kind: "error", message: GENERIC };
+  let runner: "local" | "trigger";
+  try {
+    runner = jobRunner();
+  } catch (e) {
+    console.error("[files] job runner misconfigured", { message: (e as Error).message });
+    return { kind: "error", message: "Background processing is not configured. Contact your administrator." };
   }
-  const expected = preflight(version.original_filename, version.byte_size);
-  if (!expected.ok) return { kind: "error", message: GENERIC };
-
   const supabase = await createClient();
-  const block = async (reason: BlockReason): Promise<FinishResult> => {
-    await supabase.rpc("complete_source_upload", {
-      p_version_id: version.id,
-      p_sha256: null,
-      p_detected_type: null,
-      p_block_reason: reason,
-    });
-    return { kind: "blocked", message: BLOCK_REASON_TEXT[reason] };
-  };
-
-  const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(version.storage_path);
-  if (dlErr || !blob) return block("missing_upload");
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  if (bytes.length !== version.byte_size) return block("size_mismatch");
-
-  const content = checkContent(expected.expectedType, bytes);
-  if (!content.ok) return block(content.reason);
-
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const { error } = await supabase.rpc("complete_source_upload", {
-    p_version_id: version.id,
-    p_sha256: sha256,
-    p_detected_type: content.detectedType,
-    p_block_reason: null,
-  });
-  if (error) {
-    console.warn("[files] complete failed", { code: error.code });
+  const { data, error } = await supabase
+    .rpc("request_upload_verification", { p_version_id: ids.data.versionId, p_runner: runner })
+    .single<{ job_id: string; request_count: number; status: string; enqueue: boolean }>();
+  if (error || !data) {
+    console.warn("[files] verification request failed", { code: error?.code });
     return { kind: "error", message: GENERIC };
   }
-  return { kind: "stored" };
+  if (data.enqueue) {
+    try {
+      await enqueueUploadVerification(data);
+    } catch (e) {
+      console.warn("[files] enqueue failed", { name: (e as Error).name });
+      return { kind: "error", message: "Verification could not be started. Use Retry on the file to try again.", jobId: data.job_id };
+    }
+  }
+  return { kind: "queued", jobId: data.job_id };
+}
+
+export type JobView = {
+  jobStatus: "queued" | "running" | "succeeded" | "failed";
+  versionStatus: "uploading" | "stored" | "blocked";
+  message?: string;
+};
+
+/** Polled by the upload form. Reads through row-level security as the user. */
+export async function getVerificationStatus(input: { projectId: string; versionId: string; jobId: string }): Promise<JobView | null> {
+  const m = await requireMembership();
+  const ids = z.object({ projectId: z.uuid(), versionId: z.uuid(), jobId: z.uuid() }).safeParse(input);
+  if (!ids.success) return null;
+  const supabase = await createClient();
+  const [{ data: job }, version] = await Promise.all([
+    supabase.from("processing_jobs").select("status, error_code").eq("id", ids.data.jobId).eq("org_id", m.orgId).maybeSingle(),
+    getVersion(m.orgId, ids.data.projectId, ids.data.versionId),
+  ]);
+  if (!job || !version) return null;
+  return {
+    jobStatus: job.status,
+    versionStatus: version.status,
+    message: version.block_reason ? BLOCK_REASON_TEXT[version.block_reason] : (job.error_code ?? undefined),
+  };
 }

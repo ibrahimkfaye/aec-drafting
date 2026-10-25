@@ -4,7 +4,25 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { SUPPORTED_SUMMARY } from "@/lib/files";
-import { finishUpload, startUpload } from "./actions";
+import { getVerificationStatus, requestVerification, startUpload } from "./actions";
+
+const POLL_MS = 1000;
+const POLL_LIMIT_MS = 120_000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Follows a verification job until it finishes (or we stop waiting). */
+export async function followJob(projectId: string, versionId: string, jobId: string, onUpdate: (text: string) => void) {
+  const deadline = Date.now() + POLL_LIMIT_MS;
+  while (Date.now() < deadline) {
+    const v = await getVerificationStatus({ projectId, versionId, jobId });
+    if (v?.versionStatus === "stored") return { tone: "ok" as const, text: "stored" };
+    if (v?.versionStatus === "blocked") return { tone: "warn" as const, text: `Blocked: ${v.message ?? "failed checks"}.` };
+    if (v?.jobStatus === "failed") return { tone: "error" as const, text: `Verification failed (${v.message ?? "error"}). Use Retry on the file.` };
+    onUpdate(`Verifying contents… (job ${jobId.slice(0, 8)}, ${v?.jobStatus ?? "queued"})`);
+    await sleep(POLL_MS);
+  }
+  return { tone: "info" as const, text: "Still verifying in the background. The file list will update when it finishes." };
+}
 
 type Props = { projectId: string; sources: { id: string; title: string }[] };
 type Status = { tone: "info" | "ok" | "warn" | "error"; text: string } | null;
@@ -41,12 +59,15 @@ export function UploadForm({ projectId, sources }: Props) {
       const { error } = await createClient()
         .storage.from("project-files")
         .uploadToSignedUrl(start.path, start.token, file, { contentType: start.mime });
-      // Even if the browser reports an error, let the server decide what arrived.
-      setStatus({ tone: "info", text: "Verifying contents…" });
-      const done = await finishUpload({ projectId, versionId: start.versionId });
-      if (done.kind === "stored") setStatus({ tone: "ok", text: `Stored: ${file.name}` });
-      else if (done.kind === "blocked") setStatus({ tone: "warn", text: `Blocked: ${done.message}.` });
-      else setStatus({ tone: "error", text: error ? "The upload did not complete. Please try again." : done.message });
+      // Even if the browser reports an error, let the background check decide what arrived.
+      const req = await requestVerification({ projectId, versionId: start.versionId });
+      if (req.kind === "error") {
+        setStatus({ tone: "error", text: error ? "The upload did not complete. Please try again." : req.message });
+        return;
+      }
+      setStatus({ tone: "info", text: `Verifying contents… (job ${req.jobId.slice(0, 8)})` });
+      const result = await followJob(projectId, start.versionId, req.jobId, (text) => setStatus({ tone: "info", text }));
+      setStatus(result.text === "stored" ? { tone: "ok", text: `Stored: ${file.name}` } : result);
     } catch {
       setStatus({ tone: "error", text: "The upload did not complete. Please try again." });
     } finally {

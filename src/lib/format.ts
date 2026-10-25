@@ -24,6 +24,9 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "source_version.upload_started") return "Started a file upload";
   if (action === "source_version.stored") return "Stored a file";
   if (action === "source_version.blocked") return "A file was blocked";
+  if (action === "job.queued") return "Queued a background check";
+  if (action === "job.succeeded") return "Background check finished";
+  if (action === "job.failed") return "Background check failed";
   const fields = changed.map((f) => FIELD_LABELS[f] ?? f).join(", ");
   if (action === "project.status_changed") {
     const others = changed.filter((f) => f !== "status").map((f) => FIELD_LABELS[f] ?? f);

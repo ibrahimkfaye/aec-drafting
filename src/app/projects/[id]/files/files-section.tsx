@@ -3,10 +3,15 @@ import { formatUtc } from "@/lib/format";
 import { memberLabel, type Member } from "@/lib/members";
 import type { SourceVersionRow, SourceWithVersions } from "@/lib/sources";
 import { UploadForm } from "./upload-form";
+import { RetryVerification } from "./retry-button";
 
 function statusLabel(v: SourceVersionRow) {
   if (v.status === "stored") return { text: "Stored", cls: "text-emerald-800" };
   if (v.status === "blocked") return { text: `Blocked: ${BLOCK_REASON_TEXT[v.block_reason!]}`, cls: "text-red-800" };
+  if (v.job?.status === "failed") return { text: `Verification failed (${v.job.error_code ?? "error"})`, cls: "text-red-800" };
+  if (v.job?.status === "queued" || v.job?.status === "running") {
+    return { text: `Verifying (job ${v.job.id.slice(0, 8)}, ${v.job.status})`, cls: "text-zinc-600" };
+  }
   return v.incomplete ? { text: "Upload incomplete", cls: "text-red-800" } : { text: "Uploading…", cls: "text-zinc-600" };
 }
 
@@ -18,16 +23,25 @@ export function FilesSection({
   members,
   canUpload,
   archived,
+  currentUserId,
+  localRunner,
 }: {
   projectId: string;
   sources: SourceWithVersions[];
   members: Member[];
   canUpload: boolean;
   archived: boolean;
+  currentUserId: string;
+  localRunner: boolean;
 }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">Source files</h2>
+      {localRunner && (
+        <p className="w-fit rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900" data-testid="local-runner-notice">
+          Background jobs: LOCAL DEVELOPMENT RUNNER (not Trigger.dev)
+        </p>
+      )}
       {canUpload && !archived && <UploadForm projectId={projectId} sources={sources.map((s) => ({ id: s.id, title: s.title }))} />}
       {sources.length === 0 ? (
         <p className="text-sm text-zinc-600">No files yet.</p>
@@ -64,6 +78,13 @@ export function FilesSection({
                           {memberLabel(members, v.uploaded_by)} · {formatUtc(v.created_at)}
                         </td>
                         <td>
+                          {v.status === "uploading" &&
+                            canUpload &&
+                            !archived &&
+                            v.uploaded_by === currentUserId &&
+                            (v.job?.status === "failed" || v.job?.status === "queued" || v.incomplete) && (
+                              <RetryVerification projectId={projectId} versionId={v.id} />
+                            )}
                           {v.status === "stored" && (
                             <a className="underline" href={`/projects/${projectId}/files/${v.id}`} data-testid="download">
                               Download

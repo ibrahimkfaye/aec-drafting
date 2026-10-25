@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import type { PoolClient } from "pg";
-import { asOwner, asUser, insertProject, pool, projectInput, seedFirm } from "./helpers";
+import { asOwner, asService, asUser, insertProject, pool, projectInput, seedFirm } from "./helpers";
 import { testTarget } from "./config";
 
 afterAll(async () => {
@@ -36,14 +36,30 @@ async function putObject(c: PoolClient, path: string, size = 1000) {
   ]);
 }
 
-async function complete(c: PoolClient, versionId: string, block: string | null = null) {
-  const { rows } = await c.query("select complete_source_upload($1, $2, $3, $4) as s", [
-    versionId,
-    block ? null : SHA,
-    block ? null : "pdf",
-    block,
-  ]);
-  return rows[0].s as string;
+/** The new flow: uploader requests verification, then the WORKER (service role) finishes it. */
+async function requestVerification(uploader: string, versionId: string) {
+  return asUser(uploader, async (c) =>
+    (await c.query("select * from request_upload_verification($1, 'local')", [versionId])).rows[0] as {
+      job_id: string;
+      request_count: number;
+      status: string;
+      enqueue: boolean;
+    },
+  );
+}
+
+async function workerFinish(jobId: string, block: string | null = null) {
+  return asService(async (c) => {
+    await c.query("select * from worker_start_job($1, 'test-run')", [jobId]);
+    return (await c.query("select worker_finish_upload($1, $2, $3, $4) as s", [jobId, block ? null : SHA, block ? null : "pdf", block]))
+      .rows[0].s as string;
+  });
+}
+
+/** Request + worker finish, as the uploader. */
+async function complete(uploader: string, versionId: string, block: string | null = null) {
+  const job = await requestVerification(uploader, versionId);
+  return workerFinish(job.job_id, block);
 }
 
 async function firmWithProject() {
@@ -129,7 +145,7 @@ describe("storage access", () => {
     const viewerBefore = await asUser(f.users.viewer, (c) => c.query("select 1 from storage.objects where name = $1", [v.storage_path]));
     expect(viewerBefore.rowCount).toBe(0);
 
-    expect(await asUser(f.users.author, (c) => complete(c, v.version_id))).toBe("stored");
+    expect(await complete(f.users.author, v.version_id)).toBe("stored");
 
     const viewerAfter = await asUser(f.users.viewer, (c) => c.query("select 1 from storage.objects where name = $1", [v.storage_path]));
     expect(viewerAfter.rowCount).toBe(1);
@@ -150,34 +166,93 @@ describe("storage access", () => {
     const f = await firmWithProject();
     const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
     await asUser(f.users.author, (c) => putObject(c, v.storage_path!));
-    expect(await asUser(f.users.author, (c) => complete(c, v.version_id, "signature_mismatch"))).toBe("blocked");
+    expect(await complete(f.users.author, v.version_id, "signature_mismatch")).toBe("blocked");
     const read = await asUser(f.users.author, (c) => c.query("select 1 from storage.objects where name = $1", [v.storage_path]));
     expect(read.rowCount).toBe(0);
   });
 });
 
-describe("finishing uploads", () => {
-  shimOnly("cannot mark stored without the object, or with a different size", async () => {
+describe("finishing uploads (worker only)", () => {
+  shimOnly("a missing object or a size mismatch is recorded as blocked, never stored", async () => {
     const f = await firmWithProject();
     const v = await asUser(f.users.author, (c) => begin(c, f.projectId, { size: 1000 }));
-    await expect(asUser(f.users.author, (c) => complete(c, v.version_id))).rejects.toThrow(/not found in storage/);
-    await asUser(f.users.author, (c) => putObject(c, v.storage_path!, 999));
-    await expect(asUser(f.users.author, (c) => complete(c, v.version_id))).rejects.toThrow(/does not match/);
+    expect(await complete(f.users.author, v.version_id)).toBe("blocked");
+    expect((await asOwner((c) => c.query("select block_reason from source_versions where id = $1", [v.version_id]))).rows[0].block_reason).toBe(
+      "missing_upload",
+    );
+    const v2 = await asUser(f.users.author, (c) => begin(c, f.projectId, { size: 1000 }));
+    await asUser(f.users.author, (c) => putObject(c, v2.storage_path!, 999));
+    expect(await complete(f.users.author, v2.version_id)).toBe("blocked");
   });
 
-  shimOnly("only the uploader can finish, and only once", async () => {
+  it("signed-in users can no longer finish uploads themselves (gap S-02 closed)", async () => {
+    const f = await firmWithProject();
+    const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
+    const job = await requestVerification(f.users.author, v.version_id);
+    for (const sql of [
+      "select worker_start_job($1, null)",
+      "select worker_finish_upload($1, repeat('a', 64), 'pdf', null)",
+      "select worker_fail_job($1, 'x')",
+    ]) {
+      await expect(asUser(f.users.author, (c) => c.query(sql, [job.job_id]))).rejects.toThrow(/permission denied/);
+    }
+    await expect(
+      asUser(f.users.author, (c) => c.query("select complete_source_upload($1, repeat('a', 64), 'pdf', null)", [v.version_id])),
+    ).rejects.toThrow(/does not exist/);
+  });
+
+  it("only the uploader can request verification, and not after it finished", async () => {
+    const f = await firmWithProject();
+    const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
+    await expect(requestVerification(f.users.admin, v.version_id)).rejects.toThrow(/not yours/);
+    const blocked = await asUser(f.users.author, (c) => begin(c, f.projectId, { block: "unsupported_type" }));
+    await expect(requestVerification(f.users.author, blocked.version_id)).rejects.toThrow(/already finished/);
+  });
+
+  shimOnly("verification requests are idempotent; a finished job is not re-queued", async () => {
     const f = await firmWithProject();
     const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
     await asUser(f.users.author, (c) => putObject(c, v.storage_path!));
-    await expect(asUser(f.users.admin, (c) => complete(c, v.version_id))).rejects.toThrow(/not yours/);
-    expect(await asUser(f.users.author, (c) => complete(c, v.version_id))).toBe("stored");
-    await expect(asUser(f.users.author, (c) => complete(c, v.version_id, "invalid_text"))).rejects.toThrow(/already finished/);
+    const first = await requestVerification(f.users.author, v.version_id);
+    const again = await requestVerification(f.users.author, v.version_id);
+    expect(first.enqueue).toBe(true);
+    // Still queued: re-handing it to the runner is allowed (runner de-duplicates on job + request_count).
+    expect(again).toMatchObject({ job_id: first.job_id, enqueue: true, request_count: 1 });
+    await asService((c) => c.query("select * from worker_start_job($1, 'run-1')", [first.job_id]));
+    expect(await requestVerification(f.users.author, v.version_id)).toMatchObject({ enqueue: false, status: "running" });
+    expect(await workerFinish(first.job_id)).toBe("stored");
+    // A retried worker run after success changes nothing.
+    expect(await workerFinish(first.job_id, "signature_mismatch")).toBe("stored");
+    await expect(requestVerification(f.users.author, v.version_id)).rejects.toThrow(/already finished/);
   });
 
-  it("a blocked-at-start file cannot later be turned into a stored file", async () => {
+  it("a failed job can be retried by the uploader; attempts and requests are counted", async () => {
     const f = await firmWithProject();
-    const v = await asUser(f.users.author, (c) => begin(c, f.projectId, { block: "unsupported_type" }));
-    await expect(asUser(f.users.author, (c) => complete(c, v.version_id))).rejects.toThrow(/already finished/);
+    const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
+    const job = await requestVerification(f.users.author, v.version_id);
+    await asService(async (c) => {
+      await c.query("select * from worker_start_job($1, 'run-1')", [job.job_id]);
+      await c.query("select worker_fail_job($1, 'storage_unavailable')", [job.job_id]);
+    });
+    const failed = await asOwner(async (c) => (await c.query("select * from processing_jobs where id = $1", [job.job_id])).rows[0]);
+    expect(failed).toMatchObject({ status: "failed", error_code: "storage_unavailable", attempts: 1, external_run_id: "run-1" });
+    const retry = await requestVerification(f.users.author, v.version_id);
+    expect(retry).toMatchObject({ job_id: job.job_id, enqueue: true, request_count: 2, status: "queued" });
+  });
+
+  it("firm members can see job status; other firms cannot; jobs cannot be deleted", async () => {
+    const f = await firmWithProject();
+    const other = await seedFirm(["admin"]);
+    const v = await asUser(f.users.author, (c) => begin(c, f.projectId));
+    const job = await requestVerification(f.users.author, v.version_id);
+    const own = await asUser(f.users.viewer, (c) => c.query("select status from processing_jobs where id = $1", [job.job_id]));
+    expect(own.rows[0].status).toBe("queued");
+    const foreign = await asUser(other.users.admin, (c) => c.query("select 1 from processing_jobs where id = $1", [job.job_id]));
+    expect(foreign.rowCount).toBe(0);
+    await expect(asOwner((c) => c.query("delete from processing_jobs where id = $1", [job.job_id]))).rejects.toThrow(/append-only/);
+    await expect(
+      asUser(f.users.admin, (c) => c.query("update processing_jobs set status = 'succeeded' where id = $1", [job.job_id])),
+    ).rejects.toThrow(/permission denied/);
   });
 });
 
