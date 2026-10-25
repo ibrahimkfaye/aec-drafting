@@ -7,12 +7,10 @@
 
 ## Phase 1 — Working non-AI foundation
 - ✅ 1.1 Next.js + TypeScript + Tailwind + Vitest scaffold; typecheck, lint, build pass.
-- 🟡 1.2 Migration 0001: organizations, memberships, projects, audit events, RLS.
-  21 policy tests pass against plain PostgreSQL 16 with a Supabase test shim.
-  **Still to verify against a real local Supabase stack (1.3).**
-- 🟡 1.3 Local Supabase: CLI pinned as dev dependency (2.122.0), `supabase/config.toml` added
-  (realtime, vector storage, edge functions, analytics disabled), `test:db:supabase` test mode.
-  **Waiting on: run on your Mac** — Claude's workspace cannot download Supabase images.
+- ✅ 1.2 Migration 0001: organizations, memberships, projects, audit events, RLS.
+  21 policy tests pass on plain PostgreSQL 16 + shim AND on real local Supabase (founder's Mac, 2026-10-24).
+- ✅ 1.3 Local Supabase running on founder's Mac (CLI 2.122.0 pinned; realtime, vector storage,
+  edge functions, analytics disabled). `npm run test:db:supabase`: 21/21 passed (run by founder).
 - ⬜ 1.4 Seed script: one SYNTHETIC firm with one user per role (local only).
 - ⬜ 1.5 Sign-in / sign-out (Supabase Auth, `@supabase/ssr`), protected routes, server-side session checks.
 - ⬜ 1.6 Project create / list / detail (server actions, schema validation, role checks, optimistic concurrency).
