@@ -41,3 +41,57 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "project.updated") return fields ? `Edited ${fields}` : "Saved without changes";
   return action;
 }
+
+export type AuditDetails = {
+  changed_fields?: string[];
+  revision_number?: number;
+  self_approved?: boolean;
+  self_closed?: boolean;
+  snapshot_number?: number;
+  fact_count?: number;
+  gap_count?: number;
+  excluded_count?: number;
+  version_number?: number;
+  block_reason?: string;
+  error_code?: string;
+  attempts?: number;
+};
+
+const BLOCK_TEXT: Record<string, string> = {
+  unsupported_type: "unsupported file type",
+  too_large: "larger than 25 MB",
+  empty_file: "empty file",
+  signature_mismatch: "contents don't match extension",
+  invalid_text: "not valid plain text",
+  size_mismatch: "size mismatch",
+  missing_upload: "upload didn't arrive",
+};
+
+/** Short, content-free extra detail for one audit event (numbers, flags, codes only). */
+export function auditExtra(action: string, d: AuditDetails = {}): string[] {
+  const out: string[] = [];
+  if (action.startsWith("fact.") && d.revision_number) out.push(`revision ${d.revision_number}`);
+  if (action === "fact.approved" && d.self_approved) out.push("self-approved by admin");
+  if ((action === "gap.resolved" || action === "gap.dismissed" || action === "conflict.resolved") && d.self_closed) {
+    out.push("closed by the admin who raised it");
+  }
+  if (action === "snapshot.locked" && d.snapshot_number) {
+    out.push(`snapshot ${d.snapshot_number}: ${d.fact_count ?? 0} facts, ${d.gap_count ?? 0} open gaps, ${d.excluded_count ?? 0} left out`);
+  }
+  if (action.startsWith("source_version.") && d.version_number) out.push(`v${d.version_number}`);
+  if (action === "source_version.blocked" && d.block_reason) out.push(BLOCK_TEXT[d.block_reason] ?? d.block_reason);
+  if (action === "job.failed" && d.error_code) out.push(`error: ${d.error_code}`);
+  return out;
+}
+
+/** Filter groups for the history page (action name prefixes). */
+export const AUDIT_GROUPS = {
+  projects: { label: "Projects", prefix: "project." },
+  files: { label: "Files", prefix: "source_version." },
+  facts: { label: "Facts", prefix: "fact." },
+  gaps: { label: "Gaps", prefix: "gap." },
+  conflicts: { label: "Conflicts", prefix: "conflict." },
+  snapshots: { label: "Snapshots", prefix: "snapshot." },
+  jobs: { label: "Background jobs", prefix: "job." },
+} as const;
+export type AuditGroup = keyof typeof AUDIT_GROUPS;

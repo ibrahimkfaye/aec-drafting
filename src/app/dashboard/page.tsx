@@ -32,7 +32,12 @@ async function Dashboard() {
             <span data-testid="user-role">{m.role}</span>
           </p>
         </div>
-        <SignOutButton />
+        <div className="flex items-center gap-3">
+          <Link href="/history" className="text-sm underline">
+            Firm history
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
 
       <section className="flex flex-col gap-3">

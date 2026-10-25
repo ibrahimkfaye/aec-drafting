@@ -104,3 +104,24 @@ describe("conflict flags", () => {
     expect([...lost].sort()).toEqual(["d", "e"]);
   });
 });
+
+import { auditExtra } from "@/lib/format";
+
+describe("history details", () => {
+  it("shows numbers, flags and codes — never content", () => {
+    expect(auditExtra("fact.approved", { revision_number: 2, self_approved: true })).toEqual([
+      "revision 2",
+      "self-approved by admin",
+    ]);
+    expect(auditExtra("snapshot.locked", { snapshot_number: 3, fact_count: 12, gap_count: 2, excluded_count: 1 })).toEqual([
+      "snapshot 3: 12 facts, 2 open gaps, 1 left out",
+    ]);
+    expect(auditExtra("source_version.blocked", { version_number: 1, block_reason: "signature_mismatch" })).toEqual([
+      "v1",
+      "contents don't match extension",
+    ]);
+    expect(auditExtra("gap.dismissed", { self_closed: true })).toEqual(["closed by the admin who raised it"]);
+    expect(auditExtra("job.failed", { error_code: "storage_unavailable" })).toEqual(["error: storage_unavailable"]);
+    expect(auditExtra("project.created", {})).toEqual([]);
+  });
+});
