@@ -19,6 +19,8 @@ Update this file whenever an assumption is confirmed or changed.
 |---|---|---|
 | D-01 | DB policy tests run on plain PostgreSQL with a test-only shim (`tests/db/supabase-shim.sql`), plus later on a real Supabase stack. | Fast feedback without Docker; the shim is never applied to a real project. |
 | D-02 | Removed Google-hosted fonts from the scaffold; system font stack. | Avoids a build-time external network dependency. |
+| D-04 | Supabase CLI installed per-project via npm (`npx supabase`), not globally. | Everyone uses the same pinned version. |
+| D-05 | Unused local Supabase services disabled in `config.toml`. | Lower memory/disk use on a laptop; re-enable if needed. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)

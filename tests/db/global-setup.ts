@@ -9,9 +9,19 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { Client } from "pg";
-import { adminUrl, testDbName, testUrl } from "./config";
+import { adminUrl, testDbName, testTarget, testUrl } from "./config";
 
 export default async function setup() {
+  if (testTarget() === "supabase-local") {
+    try {
+      return await checkSupabaseLocal();
+    } catch (err) {
+      // Print plainly: Vitest can obscure errors thrown from global setup.
+      console.error(`\n[db test setup] ${(err as Error).message}\n`);
+      process.exit(1);
+    }
+  }
+
   const admin = new Client({ connectionString: adminUrl() });
   await admin.connect();
   await admin.query(`drop database if exists ${testDbName()} with (force)`);
@@ -31,4 +41,17 @@ export default async function setup() {
     }
   }
   await db.end();
+}
+
+/** Real local Supabase: migrations must already be applied by `npx supabase db reset`. */
+async function checkSupabaseLocal() {
+  const db = new Client({ connectionString: testUrl() });
+  try {
+    await db.connect();
+  } catch (err) {
+    throw new Error(`Cannot reach local Supabase DB. Is Docker running and did you run "npx supabase start"? (${(err as Error).message})`);
+  }
+  const { rows } = await db.query("select to_regclass('public.audit_events') is not null as ok");
+  await db.end();
+  if (!rows[0].ok) throw new Error('Migrations not applied. Run "npx supabase db reset" first.');
 }

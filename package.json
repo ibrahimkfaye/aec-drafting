@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:db": "vitest run --project db",
-    "test:unit": "vitest run --project unit"
+    "test:unit": "vitest run --project unit",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "test:db:supabase": "TEST_TARGET=supabase-local vitest run --project db"
   },
   "dependencies": {
     "next": "16.4.3",
@@ -26,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "pg": "^8.23.1",
+    "supabase": "^2.122.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.5"

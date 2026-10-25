@@ -44,24 +44,37 @@ npm run dev
 ```
 Open http://localhost:3000.
 
+## Local Supabase (database, auth, storage on your Mac)
+
+Docker Desktop must be running. The Supabase CLI is installed with the project
+(`npm install`), so always call it through `npx`.
+
+```bash
+npm run db:start     # first run downloads images (several GB, 5-15 min)
+npm run db:reset     # wipes the LOCAL database and re-applies all migrations
+npx supabase status  # shows local URLs and keys
+npm run db:stop      # when you are done for the day
+```
+
+Local Studio (a database viewer) is at http://127.0.0.1:54323.
+
 ## Run the tests
 
-Database policy tests need a disposable local PostgreSQL. Start one in Docker:
-
 ```bash
-docker run -d --name aec-test-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
-```
-(Next time: `docker start aec-test-db`.) Then:
-
-```bash
-npm test            # all tests
-npm run test:db     # database access-control tests only
+npm run test:db:supabase   # access-control tests against your real local Supabase
 npm run typecheck
 npm run lint
 ```
 
-The test runner **refuses** to run against anything other than `localhost` and a
-database whose name ends in `_test`; it drops and recreates that database each run.
+Faster alternative without Supabase (plain PostgreSQL + a test-only shim):
+
+```bash
+docker run -d --name aec-test-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
+npm run test:db
+```
+
+Both test modes **refuse** to run against anything other than `localhost`.
+The shim mode drops and recreates a database named `*_test` each run.
 
 ## Database migrations
 

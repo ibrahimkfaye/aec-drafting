@@ -10,7 +10,9 @@
 - 🟡 1.2 Migration 0001: organizations, memberships, projects, audit events, RLS.
   21 policy tests pass against plain PostgreSQL 16 with a Supabase test shim.
   **Still to verify against a real local Supabase stack (1.3).**
-- ⬜ 1.3 Local Supabase on your Mac (`supabase start`), apply migration, re-run tests there.
+- 🟡 1.3 Local Supabase: CLI pinned as dev dependency (2.122.0), `supabase/config.toml` added
+  (realtime, vector storage, edge functions, analytics disabled), `test:db:supabase` test mode.
+  **Waiting on: run on your Mac** — Claude's workspace cannot download Supabase images.
 - ⬜ 1.4 Seed script: one SYNTHETIC firm with one user per role (local only).
 - ⬜ 1.5 Sign-in / sign-out (Supabase Auth, `@supabase/ssr`), protected routes, server-side session checks.
 - ⬜ 1.6 Project create / list / detail (server actions, schema validation, role checks, optimistic concurrency).

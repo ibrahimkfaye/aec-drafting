@@ -1,0 +1,2 @@
+-- Seed data for LOCAL development only (applied by `npx supabase db reset`).
+-- Synthetic firm and users are added in milestone 1.4.
