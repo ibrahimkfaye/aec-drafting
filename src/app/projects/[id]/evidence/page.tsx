@@ -157,6 +157,16 @@ function Revision({ r, members, isCurrent }: { r: FactRevision; members: Member[
             {c.section ? ` · ${c.section}` : ""}
           </p>
           <blockquote className="whitespace-pre-wrap text-zinc-800">“{c.excerpt}”</blockquote>
+          {c.match === "found" && (
+            <p className="text-xs text-emerald-800" data-testid="excerpt-match">
+              ✓ Excerpt found in the extracted text{c.page ? ` of page ${c.page}` : ""}
+            </p>
+          )}
+          {c.match === "not_found" && (
+            <p className="text-xs text-amber-900" data-testid="excerpt-match">
+              ⚠ Excerpt not found in the extracted text{c.page ? ` of page ${c.page}` : ""} — check it against the original
+            </p>
+          )}
         </div>
       ))}
       {r.citations.length === 0 && <p className="text-sm text-red-700">No cited source — cannot be approved.</p>}

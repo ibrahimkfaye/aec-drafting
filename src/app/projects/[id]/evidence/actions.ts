@@ -102,3 +102,37 @@ export async function reviewFact(_prev: ReviewState, formData: FormData): Promis
   revalidatePath(`/projects/${parsed.data.project_id}/evidence`);
   return { status: "done" };
 }
+
+export type PageTextResult =
+  | { status: "ok"; text: string; pageCount: number }
+  | { status: "empty" | "needs_ocr" | "not_extracted" | "no_such_page" | "error" };
+
+/**
+ * Returns one page of a stored file's extracted text for the excerpt picker.
+ * A server action (POST), so document text never appears in URLs or request logs.
+ */
+export async function getPageText(input: { projectId: string; versionId: string; page: number }): Promise<PageTextResult> {
+  const m = await requireMembership();
+  const p = z.object({ projectId: z.uuid(), versionId: z.uuid(), page: z.number().int().min(1).max(5000) }).safeParse(input);
+  if (!p.success) return { status: "error" };
+  const supabase = await createClient();
+  const { data: ex } = await supabase
+    .from("source_text_extractions")
+    .select("status, page_count")
+    .eq("org_id", m.orgId)
+    .eq("project_id", p.data.projectId)
+    .eq("source_version_id", p.data.versionId)
+    .maybeSingle();
+  if (!ex) return { status: "not_extracted" };
+  if (ex.status === "needs_ocr") return { status: "needs_ocr" };
+  if (p.data.page > ex.page_count) return { status: "no_such_page" };
+  const { data: page } = await supabase
+    .from("source_pages")
+    .select("text")
+    .eq("source_version_id", p.data.versionId)
+    .eq("page_number", p.data.page)
+    .maybeSingle();
+  if (!page) return { status: "error" };
+  if (!page.text.trim()) return { status: "empty" };
+  return { status: "ok", text: page.text, pageCount: ex.page_count };
+}

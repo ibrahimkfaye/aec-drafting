@@ -9,16 +9,10 @@
 import { createHash } from "node:crypto";
 import { BUCKET, checkContent, preflight, type BlockReason } from "../files";
 import { createAdminClient } from "../supabase/admin";
+import { dispatchExtraction } from "./extract-text";
 
-export class JobError extends Error {
-  constructor(public code: string) {
-    super(code);
-  }
-}
-
-export function errorCode(e: unknown): string {
-  return e instanceof JobError ? e.code : "unexpected_error";
-}
+import { JobError } from "./errors";
+export { JobError, errorCode } from "./errors";
 
 type StartedJob = {
   kind: string;
@@ -64,7 +58,17 @@ export async function runUploadVerification(jobId: string, externalRunId: string
 
   const content = checkContent(expected.expectedType, bytes);
   if (!content.ok) return finish(content.reason);
-  return finish(null, createHash("sha256").update(bytes).digest("hex"), content.detectedType);
+  const result = await finish(null, createHash("sha256").update(bytes).digest("hex"), content.detectedType);
+  if (result === "stored") {
+    // Next step for a stored file: extract its text. A failure here never undoes
+    // the verification; the extraction job records its own status.
+    try {
+      await dispatchExtraction(job.subject_id);
+    } catch {
+      /* visible as a missing/failed extraction; the user can retry */
+    }
+  }
+  return result;
 }
 
 export async function failJob(jobId: string, code: string): Promise<void> {

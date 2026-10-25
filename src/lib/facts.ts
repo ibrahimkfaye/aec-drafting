@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { matchExcerpt, type ExcerptMatch } from "@/lib/excerpt";
 
 export type FactStatus = "candidate" | "approved" | "rejected" | "superseded";
 
@@ -12,6 +13,8 @@ export type Citation = {
   /** Joined from source_versions for display. */
   filename: string;
   version_number: number;
+  /** Whether the excerpt appears in the extracted text of the cited page (or file). */
+  match: ExcerptMatch;
 };
 
 export type FactRevision = {
@@ -54,11 +57,56 @@ export async function listFacts(orgId: string, projectId: string): Promise<FactV
   if (revs.error || cits.error || versions.error) throw new Error("Could not load evidence.");
 
   const versionInfo = new Map(versions.data.map((v) => [v.id, v]));
+  // Load only the extracted pages that citations point at (the API caps rows per request).
+  const pagesByVersion = new Map<string, Map<number, string>>();
+  const keep = (rows: { source_version_id: string; page_number: number; text: string }[] | null) => {
+    for (const pg of rows ?? []) {
+      const m = pagesByVersion.get(pg.source_version_id) ?? new Map<number, string>();
+      m.set(pg.page_number, pg.text);
+      pagesByVersion.set(pg.source_version_id, m);
+    }
+  };
+  const paged = cits.data.filter((c) => c.page != null);
+  const wholeFile = [...new Set(cits.data.filter((c) => c.page == null).map((c) => c.source_version_id))];
+  if (paged.length) {
+    const { data, error: pErr } = await supabase
+      .from("source_pages")
+      .select("source_version_id, page_number, text")
+      .in("source_version_id", [...new Set(paged.map((c) => c.source_version_id))])
+      .in("page_number", [...new Set(paged.map((c) => c.page as number))]);
+    if (pErr) throw new Error("Could not load extracted text.");
+    keep(data);
+  }
+  for (const versionId of wholeFile) {
+    for (let from = 0; from < 5000; from += 500) {
+      const { data, error: pErr } = await supabase
+        .from("source_pages")
+        .select("source_version_id, page_number, text")
+        .eq("source_version_id", versionId)
+        .order("page_number")
+        .range(from, from + 499);
+      if (pErr) throw new Error("Could not load extracted text.");
+      keep(data);
+      if (!data || data.length < 500) break;
+    }
+  }
+  const textFor = (versionId: string, page: number | null): string[] | null => {
+    const m = pagesByVersion.get(versionId);
+    if (!m) return null;
+    if (page == null) return [...m.values()];
+    const t = m.get(page);
+    return t == null ? null : [t];
+  };
   const citationsByRevision = new Map<string, Citation[]>();
   for (const c of cits.data) {
     const v = versionInfo.get(c.source_version_id);
     const list = citationsByRevision.get(c.fact_revision_id) ?? [];
-    list.push({ ...c, filename: v?.original_filename ?? "Unknown file", version_number: v?.version_number ?? 0 });
+    list.push({
+      ...c,
+      filename: v?.original_filename ?? "Unknown file",
+      version_number: v?.version_number ?? 0,
+      match: matchExcerpt(c.excerpt, textFor(c.source_version_id, c.page)),
+    });
     citationsByRevision.set(c.fact_revision_id, list);
   }
 

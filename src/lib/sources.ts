@@ -19,6 +19,11 @@ export type SourceVersionRow = {
   storage_path: string | null;
   /** True when an upload never finished (its one-time upload URL has expired). */
   incomplete?: boolean;
+  /** Text extraction outcome, or the extraction job still in progress / failed. */
+  text?: {
+    outcome: { status: "extracted" | "needs_ocr"; page_count: number; pages_with_text: number; method: string } | null;
+    job: { id: string; status: "queued" | "running" | "succeeded" | "failed"; error_code: string | null } | null;
+  };
   /** Latest background verification job for this version, if any. */
   job?: { id: string; status: "queued" | "running" | "succeeded" | "failed"; error_code: string | null; runner: string } | null;
 };
@@ -32,7 +37,7 @@ const COLUMNS =
 
 export async function listSources(orgId: string, projectId: string): Promise<SourceWithVersions[]> {
   const supabase = await createClient();
-  const [{ data: sources, error: e1 }, { data: versions, error: e2 }, { data: jobs, error: e3 }] = await Promise.all([
+  const [{ data: sources, error: e1 }, { data: versions, error: e2 }, { data: jobs, error: e3 }, { data: texts, error: e4 }] = await Promise.all([
     supabase.from("sources").select("id, title, created_at").eq("org_id", orgId).eq("project_id", projectId).order("created_at"),
     supabase
       .from("source_versions")
@@ -42,13 +47,20 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
       .order("version_number", { ascending: false }),
     supabase
       .from("processing_jobs")
-      .select("id, subject_id, status, error_code, runner")
+      .select("id, subject_id, kind, status, error_code, runner")
       .eq("org_id", orgId)
       .eq("project_id", projectId)
-      .eq("kind", "verify_upload"),
+      .in("kind", ["verify_upload", "extract_text"]),
+    supabase
+      .from("source_text_extractions")
+      .select("source_version_id, status, page_count, pages_with_text, method")
+      .eq("org_id", orgId)
+      .eq("project_id", projectId),
   ]);
-  if (e1 || e2 || e3) throw new Error("Could not load project files.");
-  const jobBySubject = new Map((jobs ?? []).map((j) => [j.subject_id, j]));
+  if (e1 || e2 || e3 || e4) throw new Error("Could not load project files.");
+  const jobBySubject = new Map((jobs ?? []).filter((j) => j.kind === "verify_upload").map((j) => [j.subject_id, j]));
+  const extractJobBySubject = new Map((jobs ?? []).filter((j) => j.kind === "extract_text").map((j) => [j.subject_id, j]));
+  const textBySubject = new Map((texts ?? []).map((t) => [t.source_version_id, t]));
   return (sources ?? []).map((s) => ({
     ...s,
     versions: (versions as SourceVersionRow[])
@@ -57,6 +69,7 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
         ...v,
         incomplete: v.status === "uploading" && Date.now() - new Date(v.created_at).getTime() > STALE_UPLOAD_MS,
         job: jobBySubject.get(v.id) ?? null,
+        text: { outcome: textBySubject.get(v.id) ?? null, job: extractJobBySubject.get(v.id) ?? null },
       })),
   }));
 }

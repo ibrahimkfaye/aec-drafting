@@ -4,6 +4,7 @@ import { tasks } from "@trigger.dev/sdk";
 import type { verifyUploadTask } from "@/trigger/verify-upload";
 import { jobRunner } from "@/lib/server-env";
 import { errorCode, failJob, runUploadVerification } from "./verify-upload";
+import { runOrHandOff } from "./extract-text";
 
 /**
  * Hands a verification job to the configured runner and returns immediately.
@@ -29,5 +30,16 @@ export async function enqueueUploadVerification(job: { job_id: string; request_c
     { jobId: job.job_id },
     { idempotencyKey: `verify_upload:${job.job_id}:${job.request_count}` },
   );
+  return runner;
+}
+
+/** Hands a text-extraction job to the configured runner (same rules as above). */
+export async function enqueueTextExtraction(job: { job_id: string; request_count: number }) {
+  const runner = jobRunner();
+  if (runner === "local") {
+    after(() => runOrHandOff(job, "local"));
+    return runner;
+  }
+  await runOrHandOff(job, "trigger");
   return runner;
 }

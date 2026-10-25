@@ -25,6 +25,8 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "source_version.stored") return "Stored a file";
   if (action === "source_version.blocked") return "A file was blocked";
   if (action === "snapshot.locked") return "Locked an evidence snapshot";
+  if (action === "source_text.extracted") return "Extracted a file's text";
+  if (action === "source_text.needs_ocr") return "File has no text layer (needs OCR)";
   if (action === "gap.created") return "Raised a gap";
   if (action === "gap.resolved") return "Resolved a gap";
   if (action === "gap.dismissed") return "Dismissed a gap";
@@ -55,6 +57,8 @@ export type AuditDetails = {
   block_reason?: string;
   error_code?: string;
   attempts?: number;
+  page_count?: number;
+  pages_with_text?: number;
 };
 
 const BLOCK_TEXT: Record<string, string> = {
@@ -81,13 +85,14 @@ export function auditExtra(action: string, d: AuditDetails = {}): string[] {
   if (action.startsWith("source_version.") && d.version_number) out.push(`v${d.version_number}`);
   if (action === "source_version.blocked" && d.block_reason) out.push(BLOCK_TEXT[d.block_reason] ?? d.block_reason);
   if (action === "job.failed" && d.error_code) out.push(`error: ${d.error_code}`);
+  if (action === "source_text.extracted" && d.page_count != null) out.push(`${d.pages_with_text ?? 0} of ${d.page_count} pages have text`);
   return out;
 }
 
 /** Filter groups for the history page (action name prefixes). */
 export const AUDIT_GROUPS = {
   projects: { label: "Projects", prefix: "project." },
-  files: { label: "Files", prefix: "source_version." },
+  files: { label: "Files", prefix: "source" },
   facts: { label: "Facts", prefix: "fact." },
   gaps: { label: "Gaps", prefix: "gap." },
   conflicts: { label: "Conflicts", prefix: "conflict." },

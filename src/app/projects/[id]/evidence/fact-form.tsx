@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { saveFact, type FactFormState } from "./actions";
+import { PageTextPicker } from "./page-text-picker";
 import type { FactFormField } from "@/lib/fact-schema";
 
 type Props = {
@@ -31,6 +32,8 @@ export function FactForm({ projectId, versions, edit, submitLabel }: Props) {
   }
 
   const fieldError = (f: FactFormField) => err[f] && <p className="text-sm text-red-700">{err[f]}</p>;
+
+  const field = (name: string) => formRef.current?.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | null;
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3" noValidate>
@@ -88,6 +91,15 @@ export function FactForm({ projectId, versions, edit, submitLabel }: Props) {
           {fieldError("section")}
         </div>
       </div>
+      <PageTextPicker
+        projectId={projectId}
+        getSource={() => field("source_version_id")?.value ?? ""}
+        getPage={() => field("page")?.value ?? ""}
+        setExcerpt={(t) => {
+          const el = field("excerpt");
+          if (el) el.value = t;
+        }}
+      />
       <div className="flex flex-col gap-1">
         <label htmlFor={id("excerpt")} className="text-sm font-medium">
           Supporting excerpt (copied from the source)
