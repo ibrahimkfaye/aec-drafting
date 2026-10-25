@@ -47,7 +47,9 @@ async function SnapshotView({ params }: Props) {
           Fingerprint {s.fingerprint.slice(0, 16)}…
         </p>
       </header>
-      <SnapshotContents items={found.items} revisions={revisionMap(facts)} gaps={new Map(gaps.map((g) => [g.id, g]))} />
+      <div data-testid="snapshot-view">
+        <SnapshotContents items={found.items} revisions={revisionMap(facts)} gaps={new Map(gaps.map((g) => [g.id, g]))} />
+      </div>
     </PageShell>
   );
 }

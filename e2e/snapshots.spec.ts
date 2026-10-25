@@ -42,9 +42,12 @@ test("reviewer previews and locks a snapshot; it contains exactly the approved e
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/snapshots/1$`));
   await expect(page.getByTestId("locked-badge")).toBeVisible();
   await expect(page.getByTestId("locked-by")).toHaveText("Riley Reviewer (synthetic)");
-  await expect(page.getByTestId("snapshot-fact")).toContainText(approved);
-  await expect(page.getByTestId("snapshot-fact")).not.toContainText(pending);
-  await expect(page.getByTestId("snapshot-gap")).toHaveText(gap);
+  // Scope to the snapshot view: Next.js keeps the previous (preview) page mounted but hidden after a redirect.
+  const view = page.getByTestId("snapshot-view");
+  await expect(view.getByTestId("snapshot-fact")).toHaveCount(1);
+  await expect(view.getByTestId("snapshot-fact")).toContainText(approved);
+  await expect(view.getByTestId("snapshot-fact")).not.toContainText(pending);
+  await expect(view.getByTestId("snapshot-gap")).toHaveText(gap);
 });
 
 test("editing evidence after locking never changes the locked snapshot", async ({ page, browser }) => {
@@ -69,8 +72,8 @@ test("editing evidence after locking never changes the locked snapshot", async (
   await author.close();
 
   await page.goto(`/projects/${projectId}/snapshots/1`);
-  await expect(page.getByTestId("snapshot-fact")).toHaveText(new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  await expect(page.getByTestId("snapshot-fact")).not.toContainText("CHANGED");
+  await expect(page.getByTestId("snapshot-view").getByTestId("snapshot-fact")).toHaveText(new RegExp(statement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  await expect(page.getByTestId("snapshot-view").getByTestId("snapshot-fact")).not.toContainText("CHANGED");
 
   // The edited fact is awaiting review, so the next snapshot has nothing approved yet.
   await page.goto(`/projects/${projectId}/snapshots`);
@@ -150,6 +153,6 @@ test("authors and viewers can see snapshots but cannot lock them; nothing new me
 
   await signIn(page, "viewer@example.test");
   await page.goto(`/projects/${projectId}/snapshots/1`);
-  await expect(page.getByTestId("snapshot-fact")).toContainText(statement);
+  await expect(page.getByTestId("snapshot-view").getByTestId("snapshot-fact")).toContainText(statement);
   await expect(page.getByRole("button", { name: /Lock snapshot/ })).toHaveCount(0);
 });
