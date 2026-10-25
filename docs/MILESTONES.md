@@ -58,7 +58,8 @@
   plain-language descriptions with numbers/flags only (no content). One E2E test runs the whole Phase 1 flow
   (author → reviewer → snapshot → history, plus other-firm isolation). Verified here: 189 tests, build.
   Founder's Mac (2026-10-25): 34/34 E2E tests passed.
-- ⬜ 1.11 Phase 1 report.
+- ✅ 1.11 Phase 1 report (2026-10-25): https://claude.ai/artifact/NSU1ymha8rtZpFDVDBuyiS
+  Next recommended: 2.1 local text extraction (text-based PDF/TXT, page by page, no external services).
 
 ## Phases 2–5
 See the product brief. Not started.
