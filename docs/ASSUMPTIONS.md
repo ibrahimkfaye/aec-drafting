@@ -21,7 +21,7 @@ Update this file whenever an assumption is confirmed or changed.
 | D-02 | Removed Google-hosted fonts from the scaffold; system font stack. | Avoids a build-time external network dependency. |
 | D-04 | Supabase CLI installed per-project via npm (`npx supabase`), not globally. | Everyone uses the same pinned version. |
 | D-05 | Unused local Supabase services disabled in `config.toml`. | Lower memory/disk use on a laptop; re-enable if needed. |
-| D-06 | Sign-in by magic link (founder's choice). Sign-ups disabled; operator creates users. | Passwordless; no self-registration. |
+| D-06 | Sign-in by magic link (founder's choice). Self sign-up disabled via `[auth] enable_signup = false` + `shouldCreateUser: false`; operator creates users. `[auth.email] enable_signup` must stay true (it toggles the whole email provider locally). | Passwordless; no self-registration. Found by founder's E2E run 2026-10-24. |
 | D-07 | Emailed link opens a confirm page; sign-in completes only on button press (POST). | Microsoft 365 Safe Links and similar scanners pre-open links and would consume one-time tokens. |
 | D-08 | Session-dependent UI rendered inside `<Suspense>`; no session data cached across requests. | Required by Next.js 16 Cache Components; correctness over speed for now. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
