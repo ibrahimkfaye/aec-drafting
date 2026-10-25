@@ -25,12 +25,12 @@
   Verified: typecheck, lint, build, 37 unit + 24 DB tests (Claude's workspace; incl. simultaneous-save test);
   13/13 E2E tests on founder's Mac against real local Supabase (2026-10-25). DB tests on Mac: result not yet reported.
   E2E now fails on any Next.js dev-overlay warning.
-- 🟡 1.7 Migration 0003: sources + immutable source versions, private bucket + storage policies;
+- ✅ 1.7 Migration 0003: sources + immutable source versions, private bucket + storage policies;
   3-step upload (server pre-check → direct signed upload → server re-checks stored bytes);
   extension/size/signature/UTF-8 checks, SHA-256; blocked files recorded with reasons;
   `not_scanned` shown until a scanner exists; 60-second download links (attachment only).
   Verified here: 41 DB tests (incl. storage policies on shim, mutation-checked), 63 unit tests,
-  typecheck, lint, build. **5 new upload E2E tests must run on your Mac.**
+  typecheck, lint, build. Founder's Mac (2026-10-25): DB tests and 18/18 E2E tests reported passing.
 - ⬜ 1.8 Migration 0004: facts + fact revisions with source location/excerpt, manual gaps and
   conflicts, approve/edit/reject by reviewer (atomic version check).
 - ⬜ 1.9 Migration 0005: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
