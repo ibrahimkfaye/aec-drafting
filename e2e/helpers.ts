@@ -5,7 +5,7 @@ import { clearInbox, waitForSignInLink } from "./mailpit";
 export async function signIn(page: Page, email: string) {
   await clearInbox();
   await page.goto("/login");
-  await page.getByLabel("Work email").fill(email);
+  await page.getByLabel("Work email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await expect(page.getByRole("status")).toContainText("If that email belongs to a pilot user");
   await page.goto(await waitForSignInLink(email));
@@ -17,12 +17,12 @@ export async function signIn(page: Page, email: string) {
 export async function createProject(page: Page, overrides: { name?: string; reviewer?: string } = {}) {
   const name = overrides.name ?? `SYNTHETIC Project ${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   await page.goto("/projects/new");
-  await page.getByLabel("Project name").fill(name);
-  await page.getByLabel("Client").fill("SYNTHETIC Client");
-  await page.getByLabel("Location").fill("SYNTHETIC Location");
-  await page.getByLabel("Document type").selectOption("sample_technical_memo");
-  await page.getByLabel("Scope and instructions").fill("SYNTHETIC scope text for testing.");
-  if (overrides.reviewer) await page.getByLabel("Assigned reviewer").selectOption({ label: overrides.reviewer });
+  await page.getByLabel("Project name", { exact: true }).fill(name);
+  await page.getByLabel("Client", { exact: true }).fill("SYNTHETIC Client");
+  await page.getByLabel("Location", { exact: true }).fill("SYNTHETIC Location");
+  await page.getByLabel("Document type", { exact: true }).selectOption("sample_technical_memo");
+  await page.getByLabel("Scope and instructions", { exact: true }).fill("SYNTHETIC scope text for testing.");
+  if (overrides.reviewer) await page.getByLabel("Assigned reviewer", { exact: true }).selectOption({ label: overrides.reviewer });
   await page.getByRole("button", { name: "Create project" }).click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
   const id = page.url().match(/\/projects\/([0-9a-f-]{36})$/)?.[1];

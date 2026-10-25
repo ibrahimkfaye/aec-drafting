@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { publicSupabaseEnv } from "@/lib/env";
 
 /**
@@ -8,7 +9,9 @@ import { publicSupabaseEnv } from "@/lib/env";
  * cookie), so database row-level security always applies. Create one per request.
  */
 export async function createClient() {
-  // Read cookies first: this marks the page as per-request (never pre-rendered).
+  // Request time only: the auth library checks token expiry against the clock,
+  // and session data must never be prerendered or cached across requests.
+  await connection();
   const cookieStore = await cookies();
   const { url, key } = publicSupabaseEnv();
   return createServerClient(url, key, {

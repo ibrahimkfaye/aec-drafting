@@ -1,6 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { clearInbox, countMessagesTo, waitForSignInLink } from "./mailpit";
 
+// Fail if the Next.js developer overlay reports a problem on the page.
+test.afterEach(async ({ page }) => {
+  await expect(page.locator("[data-nextjs-fix-card]")).toHaveCount(0);
+});
+
 async function requestLink(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("Work email").fill(email);

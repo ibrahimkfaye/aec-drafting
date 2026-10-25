@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { createProject, signIn } from "./helpers";
 
+// Fail if the Next.js developer overlay reports a problem on the page.
+test.afterEach(async ({ page }) => {
+  await expect(page.locator("[data-nextjs-fix-card]")).toHaveCount(0);
+});
+
 test("author creates a project; required fields are enforced; history records it", async ({ page }) => {
   await signIn(page, "author@example.test");
   await page.goto("/projects/new");
@@ -19,7 +24,7 @@ test("author creates a project; required fields are enforced; history records it
 test("reviewer picker lists only reviewers and admins", async ({ page }) => {
   await signIn(page, "author@example.test");
   await page.goto("/projects/new");
-  const options = await page.getByLabel("Assigned reviewer").locator("option").allTextContents();
+  const options = await page.getByLabel("Assigned reviewer", { exact: true }).locator("option").allTextContents();
   expect(options).toEqual([
     "Not assigned yet",
     "Avery Admin (synthetic) (admin)",
@@ -57,14 +62,14 @@ test("a stale edit is refused instead of overwriting newer changes", async ({ pa
   await tab1.goto(`/projects/${p.id}/edit`);
   await tab2.goto(`/projects/${p.id}/edit`);
 
-  await tab1.getByLabel("Client").fill("SYNTHETIC Client — first save");
+  await tab1.getByLabel("Client", { exact: true }).fill("SYNTHETIC Client — first save");
   await tab1.getByRole("button", { name: "Save changes" }).click();
   await expect(tab1.getByTestId("project-client")).toHaveText("SYNTHETIC Client — first save");
 
-  await tab2.getByLabel("Client").fill("SYNTHETIC Client — stale save");
+  await tab2.getByLabel("Client", { exact: true }).fill("SYNTHETIC Client — stale save");
   await tab2.getByRole("button", { name: "Save changes" }).click();
   await expect(tab2.getByTestId("conflict-message")).toContainText("Your edits were NOT saved");
-  await expect(tab2.getByLabel("Client")).toHaveValue("SYNTHETIC Client — stale save"); // typing is kept
+  await expect(tab2.getByLabel("Client", { exact: true })).toHaveValue("SYNTHETIC Client — stale save"); // typing is kept
 
   await tab1.goto(`/projects/${p.id}`);
   await expect(tab1.getByTestId("project-client")).toHaveText("SYNTHETIC Client — first save");
