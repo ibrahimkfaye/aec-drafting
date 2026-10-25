@@ -58,10 +58,16 @@ export function factFieldErrors(error: z.ZodError): Partial<Record<FactFormField
 /** Maps database refusals to plain-language messages (never shows raw errors). */
 export function friendlyFactError(message: string | undefined): string {
   const m = message ?? "";
+  if (m.includes("close an item you raised")) return "You raised this item, so another reviewer must close it.";
   if (m.includes("separation of duties")) return "You wrote this revision, so another reviewer must review it.";
-  if (m.includes("stale")) return "This fact changed after you opened it. Nothing was saved. Reload the page to see the latest version.";
+  if (m.includes("stale")) return "This changed after you opened it. Nothing was saved. Reload the page to see the latest version.";
   if (m.includes("without a cited source")) return "A fact needs at least one cited source before it can be approved.";
-  if (m.includes("needs a note")) return "Explain why you are rejecting this fact.";
+  if (m.includes("rejection needs a note")) return "Explain why you are rejecting this fact.";
+  if (m.includes("dismissing a gap needs a note")) return "Explain why you are dismissing this gap.";
+  if (m.includes("resolving a conflict needs a note")) return "Explain how the conflict was resolved.";
+  if (m.includes("current, approved fact")) return "Only a current, approved fact can resolve a gap.";
+  if (m.includes("at least two")) return "Choose at least two different facts.";
+  if (m.includes("prevailing fact must")) return "Choose which fact stands.";
   if (m.includes("archived")) return "This project is archived.";
   if (m.includes("only stored files")) return "Only stored files can be cited.";
   if (m.includes("not allowed") || m.includes("not found")) return "You don't have permission to do that.";

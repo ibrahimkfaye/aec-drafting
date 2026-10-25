@@ -32,6 +32,7 @@ Update this file whenever an assumption is confirmed or changed.
 | D-13 | The writer of a fact revision cannot approve or reject it, unless they are an admin; admin self-approvals are flagged `self_approved` and shown in the UI and audit log. | Founder decision 2026-10-25. |
 | D-14 | Every approved fact needs ≥1 citation to a stored source version (page or section + excerpt). Editing creates a new candidate revision; prior approval stays only on the old revision. | No unsourced evidence; edits invalidate approval. |
 | D-15 | Reviewers may also propose and edit facts (their own revisions then need another reviewer). | Review screens need edit, per brief. |
+| D-16 | Gaps/conflicts: same separation of duties as facts (raiser can't close unless admin, flagged). Open gaps don't block drafting; they become explicit "information needed" markers. Facts in open conflicts and non-prevailing facts are excluded from snapshots. | Consistent with D-13; brief requires gaps to surface, not be filled. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)

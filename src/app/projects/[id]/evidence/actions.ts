@@ -19,7 +19,7 @@ export type FactFormState = {
   values?: Record<FactFormField, string>;
 };
 
-export type ReviewState = { status: "idle" | "error" | "done"; message?: string };
+export type ReviewState = { status: "idle" | "error" | "done"; message?: string; note?: string };
 
 const PROPOSERS = ["admin", "author", "reviewer"] as const;
 const REVIEWERS = ["admin", "reviewer"] as const;
@@ -97,7 +97,7 @@ export async function reviewFact(_prev: ReviewState, formData: FormData): Promis
   });
   if (error) {
     console.warn("[facts] review failed", { code: error.code });
-    return { status: "error", message: friendlyFactError(error.message) };
+    return { status: "error", message: friendlyFactError(error.message), note: parsed.data.note };
   }
   revalidatePath(`/projects/${parsed.data.project_id}/evidence`);
   return { status: "done" };

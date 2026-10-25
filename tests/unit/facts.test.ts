@@ -42,6 +42,11 @@ describe("database refusals become plain language", () => {
     ["a fact without a cited source cannot be approved", "at least one cited source"],
     ["a rejection needs a note explaining why", "Explain why"],
     ["project not found or not allowed", "permission"],
+    ["separation of duties: you cannot close an item you raised", "You raised this item"],
+    ["dismissing a gap needs a note explaining why", "dismissing this gap"],
+    ["resolving a conflict needs a note explaining why", "how the conflict was resolved"],
+    ["only a current, approved fact can resolve a gap", "current, approved fact"],
+    ["a conflict needs at least two different facts", "at least two"],
     ["something unexpected", "Please try again"],
   ])("%s", (dbMessage, expected) => {
     expect(friendlyFactError(dbMessage)).toContain(expected);

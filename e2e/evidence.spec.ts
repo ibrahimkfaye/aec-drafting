@@ -2,47 +2,13 @@
  * Evidence review: candidate facts, separation of duties, rejection, stale approval,
  * edits after approval. All facts, excerpts and files are SYNTHETIC.
  */
-import { expect, test, type Browser, type Page } from "@playwright/test";
-import { createProject, signIn, upload } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { signIn } from "./helpers";
+import { FILE, addFact, addSection, asUser, card, projectWithFile } from "./evidence-helpers";
 
 test.afterEach(async ({ page }) => {
   await expect(page.locator("[data-nextjs-fix-card]")).toHaveCount(0);
 });
-
-const PDF = Buffer.from("%PDF-1.4\n% SYNTHETIC test file - not a real document\n%%EOF\n");
-const FILE = "SYNTHETIC-inspection.pdf";
-
-/** Author creates a project with one stored file; returns its id. */
-async function projectWithFile(browser: Browser) {
-  const ctx = await browser.newContext();
-  const page = await ctx.newPage();
-  await signIn(page, "author@example.test");
-  const p = await createProject(page);
-  await upload(page, FILE, PDF, "application/pdf");
-  await ctx.close();
-  return p.id;
-}
-
-async function asUser(browser: Browser, email: string) {
-  const ctx = await browser.newContext();
-  const page = await ctx.newPage();
-  await signIn(page, email);
-  return { page, close: () => ctx.close() };
-}
-
-const addSection = (page: Page) => page.locator("section").filter({ has: page.getByRole("heading", { name: "Add a fact" }) });
-const card = (page: Page, statement: string) => page.getByTestId("fact-card").filter({ hasText: statement });
-
-async function addFact(page: Page, projectId: string, statement: string) {
-  await page.goto(`/projects/${projectId}/evidence`);
-  const form = addSection(page);
-  await form.getByLabel("Fact (one clear statement)").fill(statement);
-  await form.getByLabel("Source file").selectOption({ label: `${FILE} (v1)` });
-  await form.getByLabel("Page", { exact: true }).fill("4");
-  await form.getByLabel("Supporting excerpt (copied from the source)").fill(`SYNTHETIC excerpt for: ${statement}`);
-  await form.getByRole("button", { name: "Add candidate fact" }).click();
-  await expect(card(page, statement)).toBeVisible();
-}
 
 test("author proposes, reviewer approves; author cannot approve", async ({ page, browser }) => {
   const projectId = await projectWithFile(browser);
@@ -104,6 +70,7 @@ test("rejection requires a note, which is shown with the fact", async ({ page, b
   await page.goto(`/projects/${projectId}/evidence`);
   await card(page, statement).getByRole("button", { name: "Reject" }).click();
   await expect(card(page, statement).getByTestId("review-error")).toHaveText("Explain why you are rejecting this fact.");
+  await expect(card(page, statement).getByLabel("Review note (required to reject)")).toHaveValue("");
   await card(page, statement).getByLabel("Review note (required to reject)").fill("SYNTHETIC: excerpt says 24 m, not 42 m");
   await card(page, statement).getByRole("button", { name: "Reject" }).click();
   const rejected = page.getByTestId("group-Rejected");

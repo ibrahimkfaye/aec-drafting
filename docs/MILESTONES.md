@@ -37,8 +37,12 @@
   Approval bound to the exact current revision under a row lock; no approval without a citation;
   rejection needs a note. Verified here: 63 DB tests (mutation-checked), 78 unit tests, build.
   Founder's Mac (2026-10-25): 24/24 E2E tests passed. DB tests on Mac: result not yet reported.
-- ⬜ 1.8b Gaps (missing information) and conflicts between facts, with reviewer resolution.
-- ⬜ 1.9 Migration 0005: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
+- 🟡 1.8b Migration 0005: gaps (open → resolved by a current approved fact revision | dismissed with note)
+  and conflicts (≥2 facts → resolved by naming the prevailing fact + note). Raise: admin/author/reviewer;
+  close: reviewer/admin; raiser cannot close own item unless admin (flagged). Closed items final.
+  Facts in open conflicts / non-prevailing facts flagged as excluded from snapshots. Forms keep input on refusal.
+  Verified here: 76 DB tests (mutation-checked), 84 unit tests, build. **4 new E2E tests must run on your Mac.**
+- ⬜ 1.9 Migration 0006: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
 - ⬜ 1.10 Audit trail page; Playwright end-to-end smoke test of the whole Phase 1 flow.
 - ⬜ 1.11 Phase 1 report.
 

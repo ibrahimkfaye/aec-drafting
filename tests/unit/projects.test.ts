@@ -91,3 +91,16 @@ describe("display helpers", () => {
     expect(documentTypeLabel("legacy")).toBe("Unknown type (legacy)");
   });
 });
+
+import { conflictFlags } from "@/lib/conflict-flags";
+
+describe("conflict flags", () => {
+  it("marks facts in open conflicts and the non-prevailing facts of resolved ones", () => {
+    const { inOpen, lost } = conflictFlags([
+      { status: "open", prevailing_fact_id: null, fact_ids: ["a", "b"] },
+      { status: "resolved", prevailing_fact_id: "c", fact_ids: ["c", "d", "e"] },
+    ]);
+    expect([...inOpen].sort()).toEqual(["a", "b"]);
+    expect([...lost].sort()).toEqual(["d", "e"]);
+  });
+});
