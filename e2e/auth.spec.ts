@@ -88,6 +88,10 @@ test.describe("with the local test inbox", () => {
   test("unknown emails get the same message, and no email is sent", async ({
     page,
   }) => {
+    // Control: delivery works for a real user, so a zero count below means
+    // "not sent to the stranger", not "email is broken for everyone".
+    await requestLink(page, "admin@example.test");
+    await waitForSignInLink("admin@example.test");
     await requestLink(page, "stranger@example.test");
     await page.waitForTimeout(3000);
     expect(await countMessagesTo("stranger@example.test")).toBe(0);
