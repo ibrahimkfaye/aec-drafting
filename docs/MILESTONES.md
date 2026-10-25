@@ -11,8 +11,13 @@
   21 policy tests pass on plain PostgreSQL 16 + shim AND on real local Supabase (founder's Mac, 2026-10-24).
 - ✅ 1.3 Local Supabase running on founder's Mac (CLI 2.122.0 pinned; realtime, vector storage,
   edge functions, analytics disabled). `npm run test:db:supabase`: 21/21 passed (run by founder).
-- ⬜ 1.4 Seed script: one SYNTHETIC firm with one user per role (local only).
-- ⬜ 1.5 Sign-in / sign-out (Supabase Auth, `@supabase/ssr`), protected routes, server-side session checks.
+- 🟡 1.4 `npm run env:local` (writes .env.local from local Supabase) and `npm run seed:local`
+  (SYNTHETIC firm, one user per role + one user with no firm). **Run on your Mac to verify.**
+- 🟡 1.5 Magic-link sign-in (sign-ups disabled, same response for unknown emails, 15-min single-use
+  links, explicit "Continue signing in" button so email scanners can't consume links), sign-out,
+  `proxy.ts` session refresh + redirect, server-side `requireUser`/`requireMembership` on every page.
+  Verified here: typecheck, lint, build, 23 unit tests, 2 of 8 E2E tests (those not needing Supabase),
+  no secret key in browser bundle. **Remaining 6 E2E tests must run on your Mac (`npm run test:e2e`).**
 - ⬜ 1.6 Project create / list / detail (server actions, schema validation, role checks, optimistic concurrency).
 - ⬜ 1.7 Migration 0002: sources + source versions, private bucket + storage policies;
   upload validation (size, extension, MIME, file signature); unsupported/unsafe files

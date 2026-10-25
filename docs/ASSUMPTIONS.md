@@ -21,6 +21,9 @@ Update this file whenever an assumption is confirmed or changed.
 | D-02 | Removed Google-hosted fonts from the scaffold; system font stack. | Avoids a build-time external network dependency. |
 | D-04 | Supabase CLI installed per-project via npm (`npx supabase`), not globally. | Everyone uses the same pinned version. |
 | D-05 | Unused local Supabase services disabled in `config.toml`. | Lower memory/disk use on a laptop; re-enable if needed. |
+| D-06 | Sign-in by magic link (founder's choice). Sign-ups disabled; operator creates users. | Passwordless; no self-registration. |
+| D-07 | Emailed link opens a confirm page; sign-in completes only on button press (POST). | Microsoft 365 Safe Links and similar scanners pre-open links and would consume one-time tokens. |
+| D-08 | Session-dependent UI rendered inside `<Suspense>`; no session data cached across requests. | Required by Next.js 16 Cache Components; correctness over speed for now. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)
@@ -30,6 +33,7 @@ Update this file whenever an assumption is confirmed or changed.
 | U-02 | Docxtemplater image-module licence terms and cost. |
 | U-03 | Azure Document Intelligence model choice, region, data-retention terms. |
 | U-04 | Malware-scanning integration (required before live confidential use). |
+| U-06 | Production email sender (SMTP provider) for magic links — required before any hosted/pilot use. Local dev uses the built-in test inbox. |
 | U-05 | Supabase key naming: newer projects issue "publishable" and "secret" keys; confirm what your local CLI prints at milestone 1.3. |
 
 ## Open questions for the founder (not blocking yet)
@@ -37,5 +41,4 @@ Update this file whenever an assumption is confirmed or changed.
 |---|---|---|
 | Q-01 | Which firm and document type will the pilot use? | Phase 3 |
 | Q-02 | GitHub account/org name for the private repo. | Now (to push) |
-| Q-03 | Sign-in method: email + password, magic link, or the firm's Microsoft/Google SSO? | 1.5 |
 | Q-04 | Must the person who entered a fact be blocked from approving it? (Proposed: yes.) | 1.8 |

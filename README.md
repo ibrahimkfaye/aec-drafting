@@ -58,10 +58,26 @@ npm run db:stop      # when you are done for the day
 
 Local Studio (a database viewer) is at http://127.0.0.1:54323.
 
+After every `db:reset`, recreate the synthetic test users:
+
+```bash
+npm run env:local    # once: writes .env.local from local Supabase (never commit it)
+npm run seed:local   # SYNTHETIC firm + admin/author/reviewer/viewer/nomember @example.test
+```
+
+## Sign in locally
+
+1. `npm run dev`, open http://localhost:3000 and enter e.g. `author@example.test`.
+2. Open the local test inbox at http://127.0.0.1:54324 — no real email is sent.
+3. Click the link in the newest message, then **Continue signing in**.
+
 ## Run the tests
 
 ```bash
 npm run test:db:supabase   # access-control tests against your real local Supabase
+npm run test:unit
+npx playwright install chromium   # once
+npm run test:e2e           # sign-in flow in a real browser (needs db + seed)
 npm run typecheck
 npm run lint
 ```
