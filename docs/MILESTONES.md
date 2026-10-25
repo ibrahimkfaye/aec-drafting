@@ -54,10 +54,10 @@
   Numbered, immutable, items reference immutable revision ids. Evidence writes take a project share lock;
   locking takes an exclusive lock (no interleaving, no deadlock). Empty/identical snapshots refused.
   Verified here: 95 DB tests (mutation-checked), 93 unit tests, build. Founder's Mac: all DB + 33/33 E2E tests passed.
-- 🟡 1.10 Firm history page (/history): all firm events, filter by project / person / type, pagination,
+- ✅ 1.10 Firm history page (/history): all firm events, filter by project / person / type, pagination,
   plain-language descriptions with numbers/flags only (no content). One E2E test runs the whole Phase 1 flow
   (author → reviewer → snapshot → history, plus other-firm isolation). Verified here: 189 tests, build.
-  **E2E must run on your Mac.**
+  Founder's Mac (2026-10-25): 34/34 E2E tests passed.
 - ⬜ 1.11 Phase 1 report.
 
 ## Phases 2–5
