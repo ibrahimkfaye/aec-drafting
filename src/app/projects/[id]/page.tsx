@@ -47,6 +47,11 @@ async function ProjectDetail({ params }: Props) {
             {project.row_version} · updated {formatUtc(project.updated_at)}
           </p>
         </div>
+        <div className="flex items-start gap-2">
+          <Link href={`/projects/${project.id}/evidence`} className="rounded border border-zinc-300 px-3 py-1.5 text-sm">
+            Evidence review
+          </Link>
+        </div>
         {canEdit && (
           <div className="flex items-start gap-2">
             {!archived && (

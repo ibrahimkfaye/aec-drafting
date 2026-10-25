@@ -29,6 +29,9 @@ Update this file whenever an assumption is confirmed or changed.
 | D-10 | Archived projects cannot be edited until restored; no hard delete. | Preserves history. |
 | D-11 | Uploads go browser → Supabase Storage via one-time signed URL; server verifies stored bytes afterwards. | Vercel request-body limit (~4.5 MB) would break server-side uploads of engineering PDFs. |
 | D-12 | Pilot accepts PDF, PNG, JPG, TXT ≤ 25 MB; everything else is recorded as blocked with a hint (CAD/BIM/GIS → export to PDF/PNG). | Matches brief; XLSX deferred. |
+| D-13 | The writer of a fact revision cannot approve or reject it, unless they are an admin; admin self-approvals are flagged `self_approved` and shown in the UI and audit log. | Founder decision 2026-10-25. |
+| D-14 | Every approved fact needs ≥1 citation to a stored source version (page or section + excerpt). Editing creates a new candidate revision; prior approval stays only on the old revision. | No unsourced evidence; edits invalidate approval. |
+| D-15 | Reviewers may also propose and edit facts (their own revisions then need another reviewer). | Review screens need edit, per brief. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)
@@ -54,4 +57,3 @@ Update this file whenever an assumption is confirmed or changed.
 |---|---|---|
 | Q-01 | Which firm and document type will the pilot use? | Phase 3 |
 | Q-02 | GitHub account/org name for the private repo. | Now (to push) |
-| Q-04 | Must the person who entered a fact be blocked from approving it? (Proposed: yes.) | 1.8 |

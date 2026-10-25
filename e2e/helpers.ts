@@ -29,3 +29,13 @@ export async function createProject(page: Page, overrides: { name?: string; revi
   if (!id) throw new Error(`Unexpected URL after create: ${page.url()}`);
   return { id, name };
 }
+
+/** Uploads one in-memory SYNTHETIC file on the current project page and waits for the outcome. */
+export async function upload(page: Page, name: string, buffer: Buffer, mimeType: string, asVersionOf?: string) {
+  await page.getByLabel("File", { exact: true }).setInputFiles({ name, mimeType, buffer });
+  if (asVersionOf) await page.getByLabel("Upload as", { exact: true }).selectOption({ label: `New version of: ${asVersionOf}` });
+  await page.getByRole("button", { name: "Upload" }).click();
+  const status = page.getByTestId("upload-status");
+  await expect(status).toHaveText(/^(Stored|Blocked|The |Your |This |Choose)/, { timeout: 30_000 });
+  return status;
+}

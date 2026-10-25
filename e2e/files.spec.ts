@@ -2,8 +2,8 @@
  * Upload / download flow against real local Supabase Storage.
  * Every file here is a SYNTHETIC byte sequence built in memory — no real documents.
  */
-import { expect, test, type Page } from "@playwright/test";
-import { createProject, signIn } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { createProject, signIn, upload } from "./helpers";
 
 test.afterEach(async ({ page }) => {
   await expect(page.locator("[data-nextjs-fix-card]")).toHaveCount(0);
@@ -14,14 +14,6 @@ const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a
 const TXT = Buffer.from("SYNTHETIC field note: pier 3 bearing inspected, no defects observed.\n");
 const EXE = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
 
-async function upload(page: Page, name: string, buffer: Buffer, mimeType: string, asVersionOf?: string) {
-  await page.getByLabel("File", { exact: true }).setInputFiles({ name, mimeType, buffer });
-  if (asVersionOf) await page.getByLabel("Upload as", { exact: true }).selectOption({ label: `New version of: ${asVersionOf}` });
-  await page.getByRole("button", { name: "Upload" }).click();
-  const status = page.getByTestId("upload-status");
-  await expect(status).toHaveText(/^(Stored|Blocked|The |Your |This |Choose)/, { timeout: 30_000 });
-  return status;
-}
 
 test("author uploads PDF, PNG and text; they are stored, not scanned, and downloadable", async ({ page }) => {
   await signIn(page, "author@example.test");
