@@ -157,8 +157,9 @@ test("editing an approved fact sends it back for review and keeps the history", 
 
   const edited = card(page, `${statement} On rock.`);
   await expect(page.getByTestId("group-Needs review")).toContainText(`${statement} On rock.`);
+  await expect(edited.getByTestId("fact-status")).toHaveText("Needs review");
   await edited.getByText("Earlier revisions (1)").click();
-  await expect(edited).toContainText("Superseded");
+  await expect(edited.getByTestId("earlier-status")).toHaveText("Superseded");
   await expect(edited).toContainText("Approved by Riley Reviewer (synthetic)");
 });
 

@@ -84,11 +84,11 @@ async function Evidence({ params }: Props) {
   );
 }
 
-function Revision({ r, members }: { r: FactRevision; members: Member[] }) {
+function Revision({ r, members, isCurrent }: { r: FactRevision; members: Member[]; isCurrent: boolean }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className={`rounded px-2 py-0.5 font-medium ${STATUS_STYLE[r.status]}`} data-testid="fact-status">
+        <span className={`rounded px-2 py-0.5 font-medium ${STATUS_STYLE[r.status]}`} data-testid={isCurrent ? "fact-status" : "earlier-status"}>
           {STATUS_TEXT[r.status]}
         </span>
         <span className="text-zinc-500">revision {r.revision_number}</span>
@@ -98,7 +98,7 @@ function Revision({ r, members }: { r: FactRevision; members: Member[] }) {
           </span>
         )}
       </div>
-      <p className="font-medium" data-testid="fact-statement">
+      <p className="font-medium" data-testid={isCurrent ? "fact-statement" : "earlier-statement"}>
         {r.statement}
       </p>
       {r.citations.map((c) => (
@@ -151,7 +151,7 @@ function FactCard({
 
   return (
     <article className="flex flex-col gap-3 rounded border border-zinc-200 p-4" data-testid="fact-card">
-      <Revision r={r} members={members} />
+      <Revision r={r} members={members} isCurrent />
       {r.status === "candidate" && isReviewer && wroteIt && m.role !== "admin" && (
         <p className="text-sm text-amber-900" data-testid="own-fact-note">
           You wrote this revision, so another reviewer must review it.
@@ -186,7 +186,7 @@ function FactCard({
           <summary className="cursor-pointer text-sm text-zinc-600 underline">Earlier revisions ({fact.history.length})</summary>
           <div className="mt-3 flex flex-col gap-4 border-l border-zinc-200 pl-3">
             {fact.history.map((h) => (
-              <Revision key={h.id} r={h} members={members} />
+              <Revision key={h.id} r={h} members={members} isCurrent={false} />
             ))}
           </div>
         </details>
