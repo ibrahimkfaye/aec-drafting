@@ -33,7 +33,7 @@ Update this file whenever an assumption is confirmed or changed.
 | D-14 | Every approved fact needs ≥1 citation to a stored source version (page or section + excerpt). Editing creates a new candidate revision; prior approval stays only on the old revision. | No unsourced evidence; edits invalidate approval. |
 | D-15 | Reviewers may also propose and edit facts (their own revisions then need another reviewer). | Review screens need edit, per brief. |
 | D-16 | Gaps/conflicts: same separation of duties as facts (raiser can't close unless admin, flagged). Open gaps don't block drafting; they become explicit "information needed" markers. Facts in open conflicts and non-prevailing facts are excluded from snapshots. | Consistent with D-13; brief requires gaps to surface, not be filled. |
-| D-17 | Vercel hosts only the web app. No file bytes through Vercel Functions; verification/processing runs as Trigger.dev jobs with visible job ids; Gotenberg is a private container called only from jobs. | Founder directive 2026-10-25; Vercel 4.5 MB body limit. |
+| D-17 | *(Deferred 2026-10-25; still the reference plan.)* Vercel hosts only the web app. No file bytes through Vercel Functions; verification/processing runs as Trigger.dev jobs with visible job ids; Gotenberg is a private container called only from jobs. | Founder directive 2026-10-25; Vercel 4.5 MB body limit. |
 | D-18 | The Supabase service-role key exists only in local dev and the Trigger.dev worker; the app refuses to run on Vercel if it is configured there. | Keeps privileged credentials out of request-handling code. |
 | D-19 | Dev / preview / production use separate Supabase projects, Trigger.dev environments and email senders; preview holds synthetic data only. | Founder directive. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
@@ -62,4 +62,3 @@ Update this file whenever an assumption is confirmed or changed.
 | ID | Question | Needed by |
 |---|---|---|
 | Q-01 | Which firm and document type will the pilot use? | Phase 3 |
-| Q-02 | GitHub account/org name for the private repo. | Now (to push) |

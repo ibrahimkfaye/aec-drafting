@@ -103,7 +103,7 @@ redirects to a signed URL valid for 60 seconds with `Content-Disposition: attach
 
 Known gaps: see ASSUMPTIONS.md S-01…S-04.
 
-## Deployment (decided 2026-10-25; nothing provisioned yet)
+## Deployment (DEFERRED by founder 2026-10-25 — kept as the reference plan; nothing provisioned)
 
 Vercel hosts **only** the Next.js app. Its limits shape the design (Vercel docs, checked 2026-10-25):
 request **and** response bodies are capped at **4.5 MB** per Function call; Function duration
