@@ -23,14 +23,17 @@
   + RLS; zod validation; configurable document types (placeholder only); reviewer must be firm reviewer/admin;
   optimistic concurrency (stale saves refused, typed input kept). Seed adds a second SYNTHETIC firm.
   Verified: typecheck, lint, build, 37 unit + 24 DB tests (Claude's workspace; incl. simultaneous-save test);
-  24/24 DB tests and 13/13 E2E tests on founder's Mac against real local Supabase (2026-10-25).
+  13/13 E2E tests on founder's Mac against real local Supabase (2026-10-25). DB tests on Mac: result not yet reported.
   E2E now fails on any Next.js dev-overlay warning.
-- ⬜ 1.7 Migration 0002: sources + source versions, private bucket + storage policies;
-  upload validation (size, extension, MIME, file signature); unsupported/unsafe files
-  recorded as `blocked`; malware scan status `not_scanned` until an integration is chosen.
-- ⬜ 1.8 Migration 0003: facts + fact revisions with source location/excerpt, manual gaps and
+- 🟡 1.7 Migration 0003: sources + immutable source versions, private bucket + storage policies;
+  3-step upload (server pre-check → direct signed upload → server re-checks stored bytes);
+  extension/size/signature/UTF-8 checks, SHA-256; blocked files recorded with reasons;
+  `not_scanned` shown until a scanner exists; 60-second download links (attachment only).
+  Verified here: 41 DB tests (incl. storage policies on shim, mutation-checked), 63 unit tests,
+  typecheck, lint, build. **5 new upload E2E tests must run on your Mac.**
+- ⬜ 1.8 Migration 0004: facts + fact revisions with source location/excerpt, manual gaps and
   conflicts, approve/edit/reject by reviewer (atomic version check).
-- ⬜ 1.9 Migration 0004: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
+- ⬜ 1.9 Migration 0005: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
 - ⬜ 1.10 Audit trail page; Playwright end-to-end smoke test of the whole Phase 1 flow.
 - ⬜ 1.11 Phase 1 report.
 

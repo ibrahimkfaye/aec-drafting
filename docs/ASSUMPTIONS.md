@@ -27,6 +27,8 @@ Update this file whenever an assumption is confirmed or changed.
 | D-08 | Session-dependent UI rendered inside `<Suspense>`; no session data cached across requests. | Required by Next.js 16 Cache Components; correctness over speed for now. |
 | D-09 | Member display name/email stored on memberships, operator-managed (no client write). | App can show people without reading Supabase's private auth tables. |
 | D-10 | Archived projects cannot be edited until restored; no hard delete. | Preserves history. |
+| D-11 | Uploads go browser → Supabase Storage via one-time signed URL; server verifies stored bytes afterwards. | Vercel request-body limit (~4.5 MB) would break server-side uploads of engineering PDFs. |
+| D-12 | Pilot accepts PDF, PNG, JPG, TXT ≤ 25 MB; everything else is recorded as blocked with a hint (CAD/BIM/GIS → export to PDF/PNG). | Matches brief; XLSX deferred. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)
@@ -38,6 +40,14 @@ Update this file whenever an assumption is confirmed or changed.
 | U-04 | Malware-scanning integration (required before live confidential use). |
 | U-06 | Production email sender (SMTP provider) for magic links — required before any hosted/pilot use. Local dev uses the built-in test inbox. |
 | U-05 | Supabase key naming: newer projects issue "publishable" and "secret" keys; confirm what your local CLI prints at milestone 1.3. |
+
+## Security gaps to close before live confidential use
+| ID | Gap | Planned fix |
+|---|---|---|
+| S-01 | No malware scanning. Every file shows "Not scanned". | Choose scanner (U-04); scanner sets `scan_status` via service role; block processing until `clean`. |
+| S-02 | `complete_source_upload()` is callable by the uploading author directly (with their session), so a determined author could skip the app's content check. Size and existence are still enforced by the database. | Phase 2 processing worker re-verifies signature + SHA-256 independently before using any file. |
+| S-03 | Bytes of files blocked *after* upload remain in the private bucket (unreadable to users). | Phase 2 cleanup job deletes them via the Storage API. |
+| S-04 | Storage policies are tested on the shim; on real Supabase they are covered by end-to-end upload tests only. | Add Storage API-level tests in Phase 5. |
 
 ## Open questions for the founder (not blocking yet)
 | ID | Question | Needed by |

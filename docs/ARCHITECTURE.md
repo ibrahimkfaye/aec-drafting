@@ -79,6 +79,26 @@ Every row carries `org_id`. Child tables use composite foreign keys
 `(project_id, org_id) → projects(id, org_id)` so a row can never reference a
 project in another firm, even through a bug.
 
+## File uploads (milestone 1.7)
+
+Files never pass through the app server (Vercel limits request bodies to ~4.5 MB):
+
+1. **Start** (server action): checks role, project is active, filename, extension and size.
+   Unsupported/empty/oversized files are recorded as `blocked` and never uploaded.
+   Otherwise `begin_source_upload()` creates a version row (`uploading`) with a storage
+   path built only from IDs, and the server issues a one-time signed upload URL.
+2. **Upload** (browser → Supabase Storage, private bucket `project-files`). Storage RLS
+   allows the write only to that exact path, only by the uploader, only while `uploading`.
+   No update/delete policies: originals cannot be overwritten or removed by users.
+3. **Finish** (server action): downloads the stored bytes, checks size, file signature
+   (PDF/PNG/JPEG) or UTF-8 text validity, computes SHA-256, then calls
+   `complete_source_upload()` → `stored` or `blocked`. Blocked bytes are unreadable.
+
+Downloads go through `/projects/:id/files/:versionId`, which re-checks the user and
+redirects to a signed URL valid for 60 seconds with `Content-Disposition: attachment`.
+
+Known gaps: see ASSUMPTIONS.md S-01…S-04.
+
 ## Backups (to be completed in Phase 5)
 
 Supabase database backups do **not** include Storage file objects. File backup

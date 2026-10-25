@@ -8,6 +8,8 @@ import { documentTypeLabel } from "@/config/document-types";
 import { describeAudit, formatUtc } from "@/lib/format";
 import { PageShell } from "@/app/page-shell";
 import { StatusButton } from "./status-button";
+import { FilesSection } from "./files/files-section";
+import { listSources } from "@/lib/sources";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -27,7 +29,11 @@ async function ProjectDetail({ params }: Props) {
   const m = await requireMembership();
   const project = await getProject(m.orgId, id);
   if (!project) notFound(); // Also what users from other firms get (RLS hides the row).
-  const [members, audit] = await Promise.all([listMembers(m.orgId), listProjectAudit(m.orgId, id)]);
+  const [members, audit, sources] = await Promise.all([
+    listMembers(m.orgId),
+    listProjectAudit(m.orgId, id),
+    listSources(m.orgId, id),
+  ]);
   const canEdit = hasRole(m, ["admin", "author"]);
   const archived = project.status === "archived";
 
@@ -69,6 +75,14 @@ async function ProjectDetail({ params }: Props) {
         <dt className="text-zinc-500">Scope and instructions</dt>
         <dd className="whitespace-pre-wrap">{project.scope_instructions || "—"}</dd>
       </dl>
+
+      <FilesSection
+        projectId={project.id}
+        sources={sources}
+        members={members}
+        canUpload={canEdit}
+        archived={archived}
+      />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">History</h2>
