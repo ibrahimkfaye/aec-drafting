@@ -31,12 +31,12 @@
   `not_scanned` shown until a scanner exists; 60-second download links (attachment only).
   Verified here: 41 DB tests (incl. storage policies on shim, mutation-checked), 63 unit tests,
   typecheck, lint, build. Founder's Mac (2026-10-25): DB tests and 18/18 E2E tests reported passing.
-- 🟡 1.8a Migration 0004: facts, immutable revisions, citations (stored file in same project + page/section
+- ✅ 1.8a Migration 0004: facts, immutable revisions, citations (stored file in same project + page/section
   + excerpt). Evidence review page: propose (admin/author/reviewer), approve/reject (reviewer/admin),
   edit = new candidate revision. Writer cannot review own revision unless admin (flagged self-approved).
   Approval bound to the exact current revision under a row lock; no approval without a citation;
   rejection needs a note. Verified here: 63 DB tests (mutation-checked), 78 unit tests, build.
-  **6 new evidence E2E tests must run on your Mac.**
+  Founder's Mac (2026-10-25): 24/24 E2E tests passed. DB tests on Mac: result not yet reported.
 - ⬜ 1.8b Gaps (missing information) and conflicts between facts, with reviewer resolution.
 - ⬜ 1.9 Migration 0005: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
 - ⬜ 1.10 Audit trail page; Playwright end-to-end smoke test of the whole Phase 1 flow.
