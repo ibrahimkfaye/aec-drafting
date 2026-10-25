@@ -49,7 +49,11 @@
   Verified here: 79 DB tests (mutation-checked), 93 unit tests, build, no secrets in browser bundle.
   Founder's Mac (2026-10-25): all DB + 28/28 E2E tests passed (local runner). Trigger.dev task NOT yet run (no project).
   Hosting decision (Vercel) DEFERRED by founder 2026-10-25; work continues local-first.
-- ⬜ 1.9 Migration 0007: immutable evidence snapshots + items; new uploads/edits cannot alter a locked snapshot.
+- 🟡 1.9 Migration 0007: evidence snapshots. Preview (current approved facts, open gaps, approved-but-excluded
+  facts with reason, pending count) → lock by reviewer/admin, matched to the previewed fingerprint (stale = refused).
+  Numbered, immutable, items reference immutable revision ids. Evidence writes take a project share lock;
+  locking takes an exclusive lock (no interleaving, no deadlock). Empty/identical snapshots refused.
+  Verified here: 95 DB tests (mutation-checked), 93 unit tests, build. **5 new E2E tests must run on your Mac.**
 - ⬜ 1.10 Audit trail page; Playwright end-to-end smoke test of the whole Phase 1 flow.
 - ⬜ 1.11 Phase 1 report.
 

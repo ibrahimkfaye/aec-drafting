@@ -24,6 +24,12 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "source_version.upload_started") return "Started a file upload";
   if (action === "source_version.stored") return "Stored a file";
   if (action === "source_version.blocked") return "A file was blocked";
+  if (action === "snapshot.locked") return "Locked an evidence snapshot";
+  if (action === "gap.created") return "Raised a gap";
+  if (action === "gap.resolved") return "Resolved a gap";
+  if (action === "gap.dismissed") return "Dismissed a gap";
+  if (action === "conflict.created") return "Raised a conflict";
+  if (action === "conflict.resolved") return "Resolved a conflict";
   if (action === "job.queued") return "Queued a background check";
   if (action === "job.succeeded") return "Background check finished";
   if (action === "job.failed") return "Background check failed";

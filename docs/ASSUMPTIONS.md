@@ -36,6 +36,7 @@ Update this file whenever an assumption is confirmed or changed.
 | D-17 | *(Deferred 2026-10-25; still the reference plan.)* Vercel hosts only the web app. No file bytes through Vercel Functions; verification/processing runs as Trigger.dev jobs with visible job ids; Gotenberg is a private container called only from jobs. | Founder directive 2026-10-25; Vercel 4.5 MB body limit. |
 | D-18 | The Supabase service-role key exists only in local dev and the Trigger.dev worker; the app refuses to run on Vercel if it is configured there. | Keeps privileged credentials out of request-handling code. |
 | D-19 | Dev / preview / production use separate Supabase projects, Trigger.dev environments and email senders; preview holds synthetic data only. | Founder directive. |
+| D-20 | Reviewers and admins may lock evidence snapshots (founder decision 2026-10-25). A lock must match the preview the reviewer saw. | Snapshot is the official evidence set for drafting. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)

@@ -54,6 +54,9 @@ async function ProjectDetail({ params }: Props) {
           <Link href={`/projects/${project.id}/evidence`} className="rounded border border-zinc-300 px-3 py-1.5 text-sm">
             Evidence review
           </Link>
+          <Link href={`/projects/${project.id}/snapshots`} className="rounded border border-zinc-300 px-3 py-1.5 text-sm">
+            Snapshots
+          </Link>
         </div>
         {canEdit && (
           <div className="flex items-start gap-2">

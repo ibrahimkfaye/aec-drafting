@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
@@ -69,7 +70,12 @@ async function Evidence({ params }: Props) {
         <h1 className="text-2xl font-semibold">Evidence review</h1>
         <p className="text-sm text-zinc-600">
           Candidate facts are not evidence until a reviewer approves them. The person who wrote a fact cannot
-          approve it (admins can, and are shown as self-approved). Only approved facts can be used for drafting.
+          approve it (admins can, and are shown as self-approved). Only approved facts can be used for drafting,
+          once a reviewer locks them into a{" "}
+          <Link className="underline" href={`/projects/${id}/snapshots`}>
+            snapshot
+          </Link>
+          .
         </p>
       </header>
 
