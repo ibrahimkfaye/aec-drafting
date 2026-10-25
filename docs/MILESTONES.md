@@ -18,7 +18,12 @@
   `proxy.ts` session refresh + redirect, server-side `requireUser`/`requireMembership` on every page.
   Verified: typecheck, lint, build, 23 unit tests, no secret key in browser bundle (Claude's workspace);
   7/7 Playwright E2E tests on founder's Mac against real local Supabase (2026-10-24).
-- ⬜ 1.6 Project create / list / detail (server actions, schema validation, role checks, optimistic concurrency).
+- 🟡 1.6 Projects: list (dashboard), create, detail with history, edit, archive/restore.
+  Migration 0002 adds operator-managed member display name/email. Server-side role checks (admin/author)
+  + RLS; zod validation; configurable document types (placeholder only); reviewer must be firm reviewer/admin;
+  optimistic concurrency (stale saves refused, typed input kept). Seed adds a second SYNTHETIC firm.
+  Verified here: typecheck, lint, build, 36 unit + 24 DB tests (incl. simultaneous-save test).
+  **6 new E2E tests must run on your Mac.**
 - ⬜ 1.7 Migration 0002: sources + source versions, private bucket + storage policies;
   upload validation (size, extension, MIME, file signature); unsupported/unsafe files
   recorded as `blocked`; malware scan status `not_scanned` until an integration is chosen.

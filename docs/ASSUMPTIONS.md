@@ -12,6 +12,7 @@ Update this file whenever an assumption is confirmed or changed.
 | A-05 | Memberships/roles are managed by an operator with the service key, not through the app UI, during the pilot. | Proposed |
 | A-06 | Projects are archived, never hard-deleted, by users. | Proposed |
 | A-07 | Audit events store metadata (changed field names, versions), not document content. | Proposed |
+| A-09 | Timestamps shown in UTC for now (unambiguous across offices); local time zone display later. | Proposed |
 | A-08 | Node.js 22 LTS on all machines (`.nvmrc`). | Proposed |
 
 ## Decisions
@@ -24,6 +25,8 @@ Update this file whenever an assumption is confirmed or changed.
 | D-06 | Sign-in by magic link (founder's choice). Self sign-up disabled via `[auth] enable_signup = false` + `shouldCreateUser: false`; operator creates users. `[auth.email] enable_signup` must stay true (it toggles the whole email provider locally). | Passwordless; no self-registration. Found by founder's E2E run 2026-10-24. |
 | D-07 | Emailed link opens a confirm page; sign-in completes only on button press (POST). | Microsoft 365 Safe Links and similar scanners pre-open links and would consume one-time tokens. |
 | D-08 | Session-dependent UI rendered inside `<Suspense>`; no session data cached across requests. | Required by Next.js 16 Cache Components; correctness over speed for now. |
+| D-09 | Member display name/email stored on memberships, operator-managed (no client write). | App can show people without reading Supabase's private auth tables. |
+| D-10 | Archived projects cannot be edited until restored; no hard delete. | Preserves history. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)

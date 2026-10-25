@@ -221,3 +221,63 @@ describe("audit trail", () => {
     await expect(asOwner((c) => c.query("truncate audit_events cascade"))).rejects.toThrow(/append-only/);
   });
 });
+
+describe("member directory (migration 0002)", () => {
+  it("members can read names and emails of their own firm only", async () => {
+    const a = await seedFirm(["admin", "reviewer"]);
+    const b = await seedFirm(["admin"]);
+    await asOwner((c) =>
+      c.query("update memberships set display_name = 'SYNTHETIC Reviewer', email = 'r@example.test' where user_id = $1", [
+        a.users.reviewer,
+      ]),
+    );
+    const own = await asUser(a.users.admin, (c) =>
+      c.query("select display_name, email from memberships where user_id = $1", [a.users.reviewer]),
+    );
+    expect(own.rows[0]).toEqual({ display_name: "SYNTHETIC Reviewer", email: "r@example.test" });
+    const other = await asUser(b.users.admin, (c) =>
+      c.query("select display_name from memberships where org_id = $1", [a.orgId]),
+    );
+    expect(other.rowCount).toBe(0);
+  });
+
+  it("no signed-in user can change a directory entry", async () => {
+    const f = await seedFirm(["admin"]);
+    await expect(
+      asUser(f.users.admin, (c) =>
+        c.query("update memberships set display_name = 'x' where user_id = $1", [f.users.admin]),
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("concurrent edits", () => {
+  it("when two users save the same version at the same moment, exactly one wins", async () => {
+    const f = await seedFirm();
+    const p = await asUser(f.users.author, (c) => insertProject(c, projectInput(f.orgId, f.users.author)));
+
+    // Two separate connections, both holding version 1, both mid-transaction.
+    const c1 = await pool.connect();
+    const c2 = await pool.connect();
+    try {
+      for (const [c, uid] of [[c1, f.users.author], [c2, f.users.admin]] as const) {
+        await c.query("begin");
+        await c.query("set local role authenticated");
+        await c.query("select set_config('request.jwt.claim.sub', $1, true)", [uid]);
+      }
+      const first = await c1.query("update projects set name = 'A' where id = $1 and row_version = 1", [p.id]);
+      // c2 blocks on the row lock until c1 commits, then re-checks row_version (now 2).
+      const secondPromise = c2.query("update projects set name = 'B' where id = $1 and row_version = 1", [p.id]);
+      await c1.query("commit");
+      const second = await secondPromise;
+      await c2.query("commit");
+      expect(first.rowCount).toBe(1);
+      expect(second.rowCount).toBe(0);
+    } finally {
+      c1.release();
+      c2.release();
+    }
+    const final = await asOwner((c) => c.query("select name, row_version from projects where id = $1", [p.id]));
+    expect(final.rows[0]).toEqual({ name: "A", row_version: 2 });
+  });
+});
