@@ -5,6 +5,7 @@ import type { verifyUploadTask } from "@/trigger/verify-upload";
 import { jobRunner } from "@/lib/server-env";
 import { errorCode, failJob, runUploadVerification } from "./verify-upload";
 import { runOrHandOff } from "./extract-text";
+import { runOrHandOffOcr } from "./ocr-text";
 
 /**
  * Hands a verification job to the configured runner and returns immediately.
@@ -41,5 +42,16 @@ export async function enqueueTextExtraction(job: { job_id: string; request_count
     return runner;
   }
   await runOrHandOff(job, "trigger");
+  return runner;
+}
+
+/** Hands an OCR job to the configured runner (same rules as above). */
+export async function enqueueOcr(job: { job_id: string; request_count: number }) {
+  const runner = jobRunner();
+  if (runner === "local") {
+    after(() => runOrHandOffOcr(job, "local"));
+    return runner;
+  }
+  await runOrHandOffOcr(job, "trigger");
   return runner;
 }

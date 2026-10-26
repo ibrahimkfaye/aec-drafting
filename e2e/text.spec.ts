@@ -6,6 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { createProject, signIn, upload } from "./helpers";
 import { addSection, card } from "./evidence-helpers";
 import { makePdf } from "../tests/unit/fixtures/make-pdf";
+import { makeScanImage, makeScanPdf } from "../tests/unit/fixtures/make-scan";
 
 test.afterEach(async ({ page }) => {
   await expect(page.locator("[data-nextjs-fix-card]")).toHaveCount(0);
@@ -101,4 +102,63 @@ test("the excerpt picker fills the excerpt from page text, and cards show whethe
   await form.getByLabel("Page", { exact: true }).fill("2");
   await form.getByTestId("show-page-text").click();
   await expect(form.getByTestId("page-text-message")).toContainText("no extracted text");
+});
+
+const SCANNED = Buffer.from(makeScanPdf([makeScanImage(["SYNTHETIC scanned field notes", "Deck width is 9.1 m at midspan."], "jpeg"), null]));
+
+test("a scanned PDF can be OCR'd locally; OCR text is labelled everywhere it appears", async ({ page, browser }) => {
+  test.setTimeout(150_000); // OCR takes seconds per page
+  await signIn(page, "author@example.test");
+  const p = await createProject(page);
+  await upload(page, "SYNTHETIC-scanned.pdf", SCANNED, "application/pdf");
+  const status = await textStatusOf(page, "SYNTHETIC-scanned.pdf");
+  await expect(status).toHaveText("Needs OCR (no text layer)");
+
+  const row = page.getByTestId("source-version").filter({ hasText: "SYNTHETIC-scanned.pdf" });
+  await row.getByTestId("run-ocr").click();
+  await expect(async () => {
+    await page.reload();
+    await expect(row.getByTestId("text-status")).toHaveText("OCR text: 1 of 2 pages", { timeout: 1000 });
+  }).toPass({ timeout: 90_000 });
+  await expect(row.getByTestId("ocr-confidence")).toContainText("OCR — may contain errors");
+
+  await row.getByTestId("text-status").click();
+  await expect(page.getByTestId("page-text")).toContainText("Deck width is 9.1 m at midspan.");
+  await expect(page.getByTestId("ocr-warning")).toContainText("may misread characters");
+
+  await page.goto(`/projects/${p.id}/evidence`);
+  const form = addSection(page);
+  const statement = `SYNTHETIC: Deck width 9.1 m (${Date.now()}).`;
+  await form.getByLabel("Fact (one clear statement)").fill(statement);
+  await form.getByLabel("Source file").selectOption({ label: "SYNTHETIC-scanned.pdf (v1)" });
+  await form.getByLabel("Page", { exact: true }).fill("1");
+  await form.getByTestId("show-page-text").click();
+  await expect(form.getByTestId("picker-ocr-warning")).toBeVisible();
+  await selectInPicker(page, "Deck width is 9.1 m at midspan.");
+  await form.getByRole("button", { name: "Use selected text as excerpt" }).click();
+  await form.getByRole("button", { name: "Add candidate fact" }).click();
+  await expect(card(page, statement).getByTestId("excerpt-match")).toContainText("✓ Excerpt found in the OCR text of page 1");
+
+  // Reviewers see the OCR text but cannot start OCR.
+  const ctx = await browser.newContext();
+  const reviewer = await ctx.newPage();
+  await signIn(reviewer, "reviewer@example.test");
+  await reviewer.goto(`/projects/${p.id}`);
+  await expect(reviewer.getByTestId("run-ocr")).toHaveCount(0);
+  await ctx.close();
+});
+
+test("an image with no text gets 'OCR found no text', not invented text", async ({ page }) => {
+  test.setTimeout(120_000);
+  await signIn(page, "author@example.test");
+  await createProject(page);
+  const blank = Buffer.from(makeScanImage([], "png", 800, 600));
+  await upload(page, "SYNTHETIC-blank.png", blank, "image/png");
+  await expect(await textStatusOf(page, "SYNTHETIC-blank.png")).toHaveText("Needs OCR (no text layer)");
+  const row = page.getByTestId("source-version").filter({ hasText: "SYNTHETIC-blank.png" });
+  await row.getByTestId("run-ocr").click();
+  await expect(async () => {
+    await page.reload();
+    await expect(row.getByTestId("text-status")).toHaveText("OCR found no text", { timeout: 1000 });
+  }).toPass({ timeout: 60_000 });
 });

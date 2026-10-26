@@ -28,6 +28,8 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "snapshot.locked") return "Locked an evidence snapshot";
   if (action === "source_text.extracted") return "Extracted a file's text";
   if (action === "source_text.needs_ocr") return "File has no text layer (needs OCR)";
+  if (action === "source_text.ocr_recognized") return "Recognized a file's text with OCR";
+  if (action === "source_text.ocr_no_text_found") return "OCR found no text in a file";
   if (action === "gap.created") return "Raised a gap";
   if (action === "gap.resolved") return "Resolved a gap";
   if (action === "gap.dismissed") return "Dismissed a gap";
@@ -60,6 +62,7 @@ export type AuditDetails = {
   attempts?: number;
   page_count?: number;
   pages_with_text?: number;
+  mean_confidence?: number;
 };
 
 const BLOCK_TEXT: Record<string, string> = {
@@ -88,6 +91,10 @@ export function auditExtra(action: string, d: AuditDetails = {}): string[] {
   if (action === "source_version.blocked" && d.block_reason) out.push(BLOCK_TEXT[d.block_reason] ?? d.block_reason);
   if (action === "job.failed" && d.error_code) out.push(`error: ${d.error_code}`);
   if (action === "source_text.extracted" && d.page_count != null) out.push(`${d.pages_with_text ?? 0} of ${d.page_count} pages have text`);
+  if (action === "source_text.ocr_recognized" && d.page_count != null) {
+    out.push(`${d.pages_with_text ?? 0} of ${d.page_count} pages have text`);
+    if (d.mean_confidence != null) out.push(`engine confidence ${Math.round(Number(d.mean_confidence))}%`);
+  }
   return out;
 }
 

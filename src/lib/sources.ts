@@ -23,6 +23,11 @@ export type SourceVersionRow = {
   text?: {
     outcome: { status: "extracted" | "needs_ocr"; page_count: number; pages_with_text: number; method: string } | null;
     job: { id: string; status: "queued" | "running" | "succeeded" | "failed"; error_code: string | null } | null;
+    /** Local OCR, for files with no text layer. */
+    ocr: {
+      result: { status: "recognized" | "no_text_found"; page_count: number; pages_with_text: number; mean_confidence: number | null } | null;
+      job: { id: string; status: "queued" | "running" | "succeeded" | "failed"; error_code: string | null } | null;
+    };
   };
   /** Blocked files only: true once the cleanup confirmed no bytes are kept in storage. */
   cleared?: boolean;
@@ -45,6 +50,7 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
     { data: jobs, error: e3 },
     { data: texts, error: e4 },
     { data: cleared, error: e5 },
+    { data: ocr, error: e6 },
   ] = await Promise.all([
     supabase.from("sources").select("id, title, created_at").eq("org_id", orgId).eq("project_id", projectId).order("created_at"),
     supabase
@@ -58,17 +64,24 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
       .select("id, subject_id, kind, status, error_code, runner")
       .eq("org_id", orgId)
       .eq("project_id", projectId)
-      .in("kind", ["verify_upload", "extract_text"]),
+      .in("kind", ["verify_upload", "extract_text", "ocr_text"]),
     supabase
       .from("source_text_extractions")
       .select("source_version_id, status, page_count, pages_with_text, method")
       .eq("org_id", orgId)
       .eq("project_id", projectId),
     supabase.from("source_bytes_cleared").select("source_version_id").eq("org_id", orgId).eq("project_id", projectId),
+    supabase
+      .from("source_ocr_results")
+      .select("source_version_id, status, page_count, pages_with_text, mean_confidence")
+      .eq("org_id", orgId)
+      .eq("project_id", projectId),
   ]);
-  if (e1 || e2 || e3 || e4 || e5) throw new Error("Could not load project files.");
+  if (e1 || e2 || e3 || e4 || e5 || e6) throw new Error("Could not load project files.");
   const jobBySubject = new Map((jobs ?? []).filter((j) => j.kind === "verify_upload").map((j) => [j.subject_id, j]));
   const extractJobBySubject = new Map((jobs ?? []).filter((j) => j.kind === "extract_text").map((j) => [j.subject_id, j]));
+  const ocrJobBySubject = new Map((jobs ?? []).filter((j) => j.kind === "ocr_text").map((j) => [j.subject_id, j]));
+  const ocrBySubject = new Map((ocr ?? []).map((o) => [o.source_version_id, { ...o, mean_confidence: o.mean_confidence == null ? null : Number(o.mean_confidence) }]));
   const clearedIds = new Set((cleared ?? []).map((c) => c.source_version_id));
   const textBySubject = new Map((texts ?? []).map((t) => [t.source_version_id, t]));
   return (sources ?? []).map((s) => ({
@@ -80,7 +93,11 @@ export async function listSources(orgId: string, projectId: string): Promise<Sou
         incomplete: v.status === "uploading" && Date.now() - new Date(v.created_at).getTime() > STALE_UPLOAD_MS,
         job: jobBySubject.get(v.id) ?? null,
         cleared: clearedIds.has(v.id),
-        text: { outcome: textBySubject.get(v.id) ?? null, job: extractJobBySubject.get(v.id) ?? null },
+        text: {
+          outcome: textBySubject.get(v.id) ?? null,
+          job: extractJobBySubject.get(v.id) ?? null,
+          ocr: { result: ocrBySubject.get(v.id) ?? null, job: ocrJobBySubject.get(v.id) ?? null },
+        },
       })),
   }));
 }

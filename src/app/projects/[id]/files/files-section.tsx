@@ -27,13 +27,7 @@ function textCell(v: SourceVersionRow, projectId: string, canExtract: boolean) {
       </a>
     );
   }
-  if (o?.status === "needs_ocr") {
-    return (
-      <span className="text-amber-900" data-testid="text-status">
-        Needs OCR (no text layer)
-      </span>
-    );
-  }
+  if (o?.status === "needs_ocr") return ocrCell(v, projectId, canExtract);
   if (j?.status === "queued" || j?.status === "running") return <span data-testid="text-status">Extracting…</span>;
   if (j?.status === "failed") {
     return (
@@ -46,6 +40,41 @@ function textCell(v: SourceVersionRow, projectId: string, canExtract: boolean) {
     );
   }
   return canExtract ? <ExtractButton projectId={projectId} versionId={v.id} label="Extract text" /> : <span>—</span>;
+}
+
+function ocrCell(v: SourceVersionRow, projectId: string, canRun: boolean) {
+  const r = v.text?.ocr.result;
+  const j = v.text?.ocr.job;
+  if (r?.status === "recognized") {
+    return (
+      <span className="flex flex-col">
+        <a className="underline" href={`/projects/${projectId}/files/${v.id}/text`} data-testid="text-status">
+          OCR text: {r.pages_with_text} of {r.page_count} page{r.page_count === 1 ? "" : "s"}
+        </a>
+        <span className="text-xs text-amber-900" data-testid="ocr-confidence">
+          OCR — may contain errors{r.mean_confidence != null ? ` · engine confidence ${Math.round(r.mean_confidence)}%` : ""}
+        </span>
+      </span>
+    );
+  }
+  if (r?.status === "no_text_found") {
+    return (
+      <span className="text-amber-900" data-testid="text-status">
+        OCR found no text
+      </span>
+    );
+  }
+  const running = j?.status === "queued" || j?.status === "running";
+  return (
+    <span className="flex flex-col">
+      <span className="text-amber-900" data-testid="text-status">
+        {running ? "Running OCR…" : j?.status === "failed" ? `OCR failed (${j.error_code ?? "error"})` : "Needs OCR (no text layer)"}
+      </span>
+      {canRun && !running && (
+        <ExtractButton projectId={projectId} versionId={v.id} kind="ocr" label={j?.status === "failed" ? "Retry OCR" : "Run OCR (local, no outside service)"} />
+      )}
+    </span>
+  );
 }
 
 const SCAN_TEXT = { not_scanned: "Not scanned", clean: "Scanned: clean", infected: "Scan: INFECTED", scan_error: "Scan failed" };

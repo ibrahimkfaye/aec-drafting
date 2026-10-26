@@ -5,7 +5,7 @@ import { getPageText, type PageTextResult } from "./actions";
 
 const MESSAGES: Record<Exclude<PageTextResult["status"], "ok">, string> = {
   empty: "This page has no extracted text (it may be a drawing or a scan). Type the excerpt from the original.",
-  needs_ocr: "This file has no text layer (scanned or an image). Type the excerpt from the original.",
+  needs_ocr: "This file has no text layer (scanned or an image). Run OCR from the project page, or type the excerpt from the original.",
   not_extracted: "This file's text hasn't been extracted yet. Type the excerpt, or extract its text from the project page.",
   no_such_page: "That page number is beyond the end of the file.",
   error: "Choose a source file and a page number first.",
@@ -72,7 +72,13 @@ export function PageTextPicker({
             <button type="button" onClick={applySelection} className="rounded border border-zinc-300 px-3 py-1 text-sm">
               Use selected text as excerpt
             </button>
-            <span className="text-xs text-zinc-500">Extracted text — confirm against the original before approving.</span>
+            {result.ocr ? (
+              <span className="text-xs font-medium text-amber-900" data-testid="picker-ocr-warning">
+                OCR text — it may misread characters, especially numbers and units. Check against the original.
+              </span>
+            ) : (
+              <span className="text-xs text-zinc-500">Extracted text — confirm against the original before approving.</span>
+            )}
           </div>
         </>
       )}

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BLOCK_REASON_TEXT, preflight, sanitizeFilename } from "@/lib/files";
 import { BUCKET, getVersion } from "@/lib/sources";
 import { jobRunner } from "@/lib/server-env";
-import { enqueueTextExtraction, enqueueUploadVerification } from "@/lib/jobs/enqueue";
+import { enqueueOcr, enqueueTextExtraction, enqueueUploadVerification } from "@/lib/jobs/enqueue";
 
 export type StartResult =
   | { kind: "upload"; versionId: string; path: string; token: string; mime: string }
@@ -145,6 +145,33 @@ export async function requestExtraction(input: { projectId: string; versionId: s
       await enqueueTextExtraction(data);
     } catch {
       return { kind: "error", message: "Text extraction could not be started. Try again.", jobId: data.job_id };
+    }
+  }
+  return { kind: "queued", jobId: data.job_id };
+}
+
+/** Requests (or retries) local OCR for a stored file with no text layer. Admins and authors only. */
+export async function requestOcr(input: { projectId: string; versionId: string }): Promise<FinishResult> {
+  const m = await requireMembership();
+  if (!hasRole(m, ["admin", "author"])) return { kind: "error", message: "Your role cannot start OCR." };
+  const ids = z.object({ projectId: z.uuid(), versionId: z.uuid() }).safeParse(input);
+  if (!ids.success) return { kind: "error", message: GENERIC };
+  let runner: "local" | "trigger";
+  try {
+    runner = jobRunner();
+  } catch {
+    return { kind: "error", message: "Background processing is not configured. Contact your administrator." };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("request_ocr", { p_version_id: ids.data.versionId, p_runner: runner })
+    .single<{ job_id: string; request_count: number; status: string; enqueue: boolean }>();
+  if (error || !data) return { kind: "error", message: "OCR could not be started." };
+  if (data.enqueue) {
+    try {
+      await enqueueOcr(data);
+    } catch {
+      return { kind: "error", message: "OCR could not be started. Try again.", jobId: data.job_id };
     }
   }
   return { kind: "queued", jobId: data.job_id };

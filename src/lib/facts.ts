@@ -15,6 +15,8 @@ export type Citation = {
   version_number: number;
   /** Whether the excerpt appears in the extracted text of the cited page (or file). */
   match: ExcerptMatch;
+  /** True when that text came from OCR (less reliable than a text layer). */
+  ocrText: boolean;
 };
 
 export type FactRevision = {
@@ -59,8 +61,10 @@ export async function listFacts(orgId: string, projectId: string): Promise<FactV
   const versionInfo = new Map(versions.data.map((v) => [v.id, v]));
   // Load only the extracted pages that citations point at (the API caps rows per request).
   const pagesByVersion = new Map<string, Map<number, string>>();
-  const keep = (rows: { source_version_id: string; page_number: number; text: string }[] | null) => {
+  const ocrVersions = new Set<string>();
+  const keep = (rows: { source_version_id: string; page_number: number; text: string; origin: string }[] | null) => {
     for (const pg of rows ?? []) {
+      if (pg.origin === "ocr") ocrVersions.add(pg.source_version_id);
       const m = pagesByVersion.get(pg.source_version_id) ?? new Map<number, string>();
       m.set(pg.page_number, pg.text);
       pagesByVersion.set(pg.source_version_id, m);
@@ -71,7 +75,7 @@ export async function listFacts(orgId: string, projectId: string): Promise<FactV
   if (paged.length) {
     const { data, error: pErr } = await supabase
       .from("source_pages")
-      .select("source_version_id, page_number, text")
+      .select("source_version_id, page_number, text, origin")
       .in("source_version_id", [...new Set(paged.map((c) => c.source_version_id))])
       .in("page_number", [...new Set(paged.map((c) => c.page as number))]);
     if (pErr) throw new Error("Could not load extracted text.");
@@ -81,7 +85,7 @@ export async function listFacts(orgId: string, projectId: string): Promise<FactV
     for (let from = 0; from < 5000; from += 500) {
       const { data, error: pErr } = await supabase
         .from("source_pages")
-        .select("source_version_id, page_number, text")
+        .select("source_version_id, page_number, text, origin")
         .eq("source_version_id", versionId)
         .order("page_number")
         .range(from, from + 499);
@@ -106,6 +110,7 @@ export async function listFacts(orgId: string, projectId: string): Promise<FactV
       filename: v?.original_filename ?? "Unknown file",
       version_number: v?.version_number ?? 0,
       match: matchExcerpt(c.excerpt, textFor(c.source_version_id, c.page)),
+      ocrText: ocrVersions.has(c.source_version_id),
     });
     citationsByRevision.set(c.fact_revision_id, list);
   }

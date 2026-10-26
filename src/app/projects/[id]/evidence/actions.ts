@@ -104,7 +104,7 @@ export async function reviewFact(_prev: ReviewState, formData: FormData): Promis
 }
 
 export type PageTextResult =
-  | { status: "ok"; text: string; pageCount: number }
+  | { status: "ok"; text: string; pageCount: number; ocr: boolean }
   | { status: "empty" | "needs_ocr" | "not_extracted" | "no_such_page" | "error" };
 
 /**
@@ -124,15 +124,25 @@ export async function getPageText(input: { projectId: string; versionId: string;
     .eq("source_version_id", p.data.versionId)
     .maybeSingle();
   if (!ex) return { status: "not_extracted" };
-  if (ex.status === "needs_ocr") return { status: "needs_ocr" };
-  if (p.data.page > ex.page_count) return { status: "no_such_page" };
+  let pageCount = ex.page_count;
+  if (ex.status === "needs_ocr") {
+    const { data: ocr } = await supabase
+      .from("source_ocr_results")
+      .select("status, page_count")
+      .eq("org_id", m.orgId)
+      .eq("source_version_id", p.data.versionId)
+      .maybeSingle();
+    if (ocr?.status !== "recognized") return { status: "needs_ocr" };
+    pageCount = ocr.page_count;
+  }
+  if (p.data.page > pageCount) return { status: "no_such_page" };
   const { data: page } = await supabase
     .from("source_pages")
-    .select("text")
+    .select("text, origin")
     .eq("source_version_id", p.data.versionId)
     .eq("page_number", p.data.page)
     .maybeSingle();
   if (!page) return { status: "error" };
   if (!page.text.trim()) return { status: "empty" };
-  return { status: "ok", text: page.text, pageCount: ex.page_count };
+  return { status: "ok", text: page.text, pageCount, ocr: page.origin === "ocr" };
 }

@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   // pdf.js loads its own worker file at runtime; keep it out of the server bundle.
-  serverExternalPackages: ["pdfjs-dist"],
+  // The OCR engine starts its own worker thread and loads WASM + language data from disk.
+  serverExternalPackages: ["pdfjs-dist", "tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "@napi-rs/canvas"],
   partialPrefetching: true,
   turbopack: {
     rules: {
