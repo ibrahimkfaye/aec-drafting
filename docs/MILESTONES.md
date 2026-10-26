@@ -77,7 +77,7 @@
   File list shows "No file contents kept" / "Contents awaiting cleanup" on blocked files.
   Verified here: 110 DB tests (mutation-checked), 112 unit tests, lint, build.
   Founder's Mac (2026-10-25): all DB + E2E tests passed; `cleanup:blocked` ran with 0 failures.
-- 🟡 2.3 Local OCR for scans and images. Migration 0010: `source_pages.origin` (text_layer | plain_text | ocr) +
+- ✅ 2.3 Local OCR for scans and images. Migration 0010: `source_pages.origin` (text_layer | plain_text | ocr) +
   per-page engine confidence; `source_ocr_results` (recognized | no_text_found, engine, DPI, counts; append-only, audited).
   OCR runs only when an admin/author clicks "Run OCR", only for files with no text layer, only in the worker:
   tesseract.js 7.0.0 (WebAssembly) with English data read from node_modules — nothing downloaded or sent anywhere
@@ -85,7 +85,8 @@
   images refused from their header if too large; ≤ 200 pages; engine start/page timeouts.
   OCR text is labelled in the file list, page viewer, excerpt picker and fact cards.
   Verified here: 119 DB tests (mutation-checked), 121 unit tests (real OCR on synthetic scans), lint, build,
-  OCR run inside Next dev. **2 new E2E tests must run on your Mac.**
+  OCR run inside Next dev. Founder's Mac (2026-10-26): all DB + E2E tests passed; OCR tried by hand.
+  Fix 2026-10-26: app is light-theme only (dark-mode Macs showed pale text on light panels).
   Not covered: languages other than English; handwriting; PDFs that mix text pages and scanned pages (only
   wholly scanned files are OCR'd).
 
