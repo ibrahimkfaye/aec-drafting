@@ -78,7 +78,7 @@ async function TextView({ params, searchParams }: Props) {
         {n < pageCount ? <Link className="underline" href={`${base}?page=${n + 1}`}>Next page →</Link> : <span className="text-zinc-400">Next page →</span>}
       </nav>
       {page?.text ? (
-        <pre className="whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-4 font-sans text-sm" data-testid="page-text">
+        <pre className="whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-4 font-sans text-sm text-zinc-900" data-testid="page-text">
           {page.text}
         </pre>
       ) : (

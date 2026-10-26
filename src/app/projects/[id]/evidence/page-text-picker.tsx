@@ -63,7 +63,7 @@ export function PageTextPicker({
         <>
           <pre
             ref={panel}
-            className="max-h-64 overflow-auto whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-3 font-sans text-sm"
+            className="max-h-64 overflow-auto whitespace-pre-wrap rounded border border-zinc-200 bg-zinc-50 p-3 font-sans text-sm text-zinc-900"
             data-testid="picker-text"
           >
             {result.text}
