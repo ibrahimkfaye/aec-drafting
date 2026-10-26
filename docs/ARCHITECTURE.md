@@ -115,6 +115,7 @@ is 300 s by default (800 s max on Pro); the **Hobby plan is for non-commercial p
 | File upload | Browser → Supabase Storage (signed one-time URL) | Bytes never pass through Vercel. |
 | File download | Vercel Function checks access → 303 redirect to 60 s signed Storage URL | Bytes never pass through Vercel. |
 | Content verification, OCR, extraction, drafting, DOCX assembly | Trigger.dev tasks | App records a `processing_jobs` row, hands off, returns the **job id**; UI polls status. |
+| Cleanup of blocked / abandoned upload bytes | Trigger.dev scheduled task (hourly); locally `npm run cleanup:blocked` | The database lists only *blocked* versions and records a deletion only once the object is gone; the worker deletes via the Storage API. |
 | DOCX → PDF | Gotenberg (private container, basic auth, no public route) | Called only from Trigger.dev tasks, never from Vercel or browsers. |
 
 ### Credentials by location (privileged keys never reach browsers or Vercel)

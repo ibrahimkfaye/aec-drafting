@@ -70,6 +70,12 @@
   excerpt appears in the cited page's extracted text. No external services.
   Verified here: 103 DB tests, 105 unit tests, build, pdf.js run inside Next dev.
   Founder's Mac (2026-10-25): 37/37 E2E tests passed. DB tests on Mac: result not yet reported.
+- 🟡 2.2 Blocked-file cleanup (closes S-03). Migration 0009: `source_bytes_cleared` (append-only, audited, firm-visible);
+  service-role-only functions: list blocked versions to clear, record a clearance (refused unless the object is gone and
+  the version is blocked), mark uploads unfinished for 24 h as blocked. Worker deletes a blocked file's bytes right after
+  verification blocks it; `npm run cleanup:blocked` sweep (Trigger.dev hourly schedule written, NOT run).
+  File list shows "No file contents kept" / "Contents awaiting cleanup" on blocked files.
+  Verified here: 110 DB tests (mutation-checked), 112 unit tests, lint, build. **E2E must run on your Mac.**
 
 ## Phases 3–5
 See the product brief. Not started.

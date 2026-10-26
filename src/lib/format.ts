@@ -24,6 +24,7 @@ export function describeAudit(action: string, changed: string[] = []): string {
   if (action === "source_version.upload_started") return "Started a file upload";
   if (action === "source_version.stored") return "Stored a file";
   if (action === "source_version.blocked") return "A file was blocked";
+  if (action === "source_version.bytes_cleared") return "Removed a blocked file's contents from storage";
   if (action === "snapshot.locked") return "Locked an evidence snapshot";
   if (action === "source_text.extracted") return "Extracted a file's text";
   if (action === "source_text.needs_ocr") return "File has no text layer (needs OCR)";
@@ -69,6 +70,7 @@ const BLOCK_TEXT: Record<string, string> = {
   invalid_text: "not valid plain text",
   size_mismatch: "size mismatch",
   missing_upload: "upload didn't arrive",
+  abandoned_upload: "upload never finished",
 };
 
 /** Short, content-free extra detail for one audit event (numbers, flags, codes only). */

@@ -63,6 +63,7 @@ After every `db:reset`, recreate the synthetic test users:
 ```bash
 npm run env:local    # once: writes .env.local from local Supabase (never commit it)
 npm run seed:local   # 2 SYNTHETIC firms; admin/author/reviewer/viewer/other-admin/nomember @example.test
+npm run cleanup:blocked   # deletes stored bytes of blocked/abandoned uploads (local only; prints counts)
 ```
 
 ## Sign in locally

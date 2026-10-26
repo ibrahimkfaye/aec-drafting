@@ -104,8 +104,15 @@ export function FilesSection({
                         <td className="pr-3">v{v.version_number}</td>
                         <td className="pr-3 break-all">{v.original_filename}</td>
                         <td className="pr-3">{formatBytes(v.byte_size)}</td>
-                        <td className={`pr-3 ${st.cls}`} data-testid="version-status">
-                          {st.text}
+                        <td className="pr-3">
+                          <span className={st.cls} data-testid="version-status">
+                            {st.text}
+                          </span>
+                          {v.status === "blocked" && v.storage_path && (
+                            <span className="block text-xs text-zinc-500" data-testid="contents-status">
+                              {v.cleared ? "No file contents kept" : "Contents awaiting cleanup"}
+                            </span>
+                          )}
                         </td>
                         <td className="pr-3">{v.status === "stored" ? SCAN_TEXT[v.scan_status] : "—"}</td>
                         <td className="pr-3">{textCell(v, projectId, canUpload && !archived)}</td>

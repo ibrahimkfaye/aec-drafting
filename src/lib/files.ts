@@ -16,7 +16,8 @@ export type BlockReason =
   | "signature_mismatch"
   | "invalid_text"
   | "size_mismatch"
-  | "missing_upload";
+  | "missing_upload"
+  | "abandoned_upload";
 
 const BY_EXTENSION: Record<string, { type: DetectedType; mime: string }> = {
   ".pdf": { type: "pdf", mime: "application/pdf" },
@@ -43,6 +44,7 @@ export const BLOCK_REASON_TEXT: Record<BlockReason, string> = {
   invalid_text: "Not a valid plain-text file",
   size_mismatch: "Uploaded size didn't match",
   missing_upload: "Upload didn't arrive",
+  abandoned_upload: "Upload never finished",
 };
 
 export function extensionOf(filename: string): string {

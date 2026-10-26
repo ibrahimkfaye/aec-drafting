@@ -60,7 +60,7 @@ test("uploading a new version keeps the earlier version", async ({ page }) => {
   await expect(source.getByTestId("source-version").last()).toContainText("v1");
 });
 
-test("a disguised file is blocked after upload and can't be downloaded", async ({ page }) => {
+test("a disguised file is blocked after upload, can't be downloaded, and its bytes are deleted", async ({ page }) => {
   await signIn(page, "author@example.test");
   await createProject(page);
   const status = await upload(page, "SYNTHETIC-invoice.pdf", EXE, "application/pdf");
@@ -68,6 +68,11 @@ test("a disguised file is blocked after upload and can't be downloaded", async (
   const row = page.getByTestId("source-version");
   await expect(row.getByTestId("version-status")).toHaveText("Blocked: File contents don't match its extension");
   await expect(row.getByTestId("download")).toHaveCount(0);
+  // The worker deletes the stored bytes; the database records it only once the object is gone.
+  await expect(async () => {
+    await page.reload();
+    await expect(row.getByTestId("contents-status")).toHaveText("No file contents kept", { timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
 });
 
 test("unsupported types are recorded as blocked without uploading", async ({ page }) => {
@@ -77,6 +82,7 @@ test("unsupported types are recorded as blocked without uploading", async ({ pag
   const status = await upload(page, "SYNTHETIC-spec.docx", docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   await expect(status).toContainText("Export to PDF");
   await expect(page.getByTestId("version-status")).toHaveText("Blocked: Unsupported file type");
+  await expect(page.getByTestId("contents-status")).toHaveCount(0); // nothing was ever uploaded
 
   const dwg = Buffer.from("AC1032SYNTHETIC");
   await expect(await upload(page, "SYNTHETIC-site.dwg", dwg, "application/octet-stream")).toContainText("CAD, BIM and GIS");

@@ -17,6 +17,7 @@
     "test:db:supabase": "TEST_TARGET=supabase-local vitest run --project db",
     "env:local": "node scripts/local-env.mjs",
     "seed:local": "node --env-file=.env.local --import tsx scripts/seed-local.ts",
+    "cleanup:blocked": "node --env-file=.env.local --import tsx scripts/cleanup-blocked.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

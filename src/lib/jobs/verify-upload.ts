@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { BUCKET, checkContent, preflight, type BlockReason } from "../files";
 import { createAdminClient } from "../supabase/admin";
 import { dispatchExtraction } from "./extract-text";
+import { clearBlockedBytes } from "./clear-blocked";
 
 import { JobError } from "./errors";
 export { JobError, errorCode } from "./errors";
@@ -39,6 +40,7 @@ export async function runUploadVerification(jobId: string, externalRunId: string
       p_block_reason: block,
     });
     if (e) throw new JobError("finish_failed");
+    await afterFinish(admin, job.subject_id, data as string);
     return data as string;
   };
 
@@ -69,6 +71,16 @@ export async function runUploadVerification(jobId: string, externalRunId: string
     }
   }
   return result;
+}
+
+/** Records the outcome; a blocked file's bytes are deleted straight away (best effort; the sweep retries). */
+async function afterFinish(admin: ReturnType<typeof createAdminClient>, versionId: string, result: string) {
+  if (result !== "blocked") return;
+  try {
+    await clearBlockedBytes(admin, versionId);
+  } catch {
+    /* left for the cleanup sweep */
+  }
 }
 
 export async function failJob(jobId: string, code: string): Promise<void> {

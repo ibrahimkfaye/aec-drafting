@@ -38,6 +38,7 @@ Update this file whenever an assumption is confirmed or changed.
 | D-19 | Dev / preview / production use separate Supabase projects, Trigger.dev environments and email senders; preview holds synthetic data only. | Founder directive. |
 | D-20 | Reviewers and admins may lock evidence snapshots (founder decision 2026-10-25). A lock must match the preview the reviewer saw. | Snapshot is the official evidence set for drafting. |
 | D-21 | Extracted text is derived data in its own immutable tables, never edited, labelled with method/extractor; scans and images are marked needs_ocr rather than guessed. Excerpt checks are informational (shown to reviewers), not a block. | Keeps originals authoritative; brief forbids invented content. |
+| D-22 | Bytes of blocked files are deleted permanently; the version row, its reason and its audit history are kept. Uploads unfinished after 24 hours become "Blocked: upload never finished". Stored files are never deleted by cleanup (enforced in the database). | Founder chose cleanup 2026-10-25; unusable bytes are a liability. |
 | D-03 | Composite FKs `(project_id, org_id)` for all project-owned tables. | Firm ownership enforced by the database, not just by code. |
 
 ## Unresolved provider details (do not configure until verified)
@@ -57,7 +58,7 @@ Update this file whenever an assumption is confirmed or changed.
 |---|---|---|
 | S-01 | No malware scanning. Every file shows "Not scanned". | Choose scanner (U-04); scanner sets `scan_status` via service role; block processing until `clean`. |
 | S-02 | ~~User-callable upload completion could skip the content check.~~ **Closed in 1.8c:** the function was dropped; only the service-role worker can finish uploads (tested). | — |
-| S-03 | Bytes of files blocked *after* upload remain in the private bucket (unreadable to users). | Phase 2 cleanup job deletes them via the Storage API. |
+| S-03 | ~~Bytes of files blocked *after* upload remain in the private bucket.~~ **Closed in 2.2** (pending E2E on your Mac): deleted right after blocking; a sweep also clears abandoned uploads and any bytes re-sent while an upload link was still valid. | Hosted: schedule the sweep (written, not yet run). Locally it runs only when you run `npm run cleanup:blocked`. |
 | S-05 | Text extraction parses uploaded PDFs before any malware scan exists (pdf.js, recent version, fonts/XFA disabled, no execution of document scripts). | When a scanner is added, run extraction only on files scanned clean. |
 | S-06 | Excerpt checks load cited pages through the API, which caps rows per request (1,000 locally); a project citing more than ~1,000 distinct pages at once could show some excerpts as unchecked. | Move the check into a database function if projects grow that large. |
 | S-04 | Storage policies are tested on the shim; on real Supabase they are covered by end-to-end upload tests only. | Add Storage API-level tests in Phase 5. |
