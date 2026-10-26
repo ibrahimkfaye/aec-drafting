@@ -62,13 +62,14 @@
   Next recommended: 2.1 local text extraction (text-based PDF/TXT, page by page, no external services).
 
 ## Phase 2 — Document extraction
-- 🟡 2.1 Local text extraction. Migration 0008: derived `source_text_extractions` + `source_pages` (immutable,
+- ✅ 2.1 Local text extraction. Migration 0008: derived `source_text_extractions` + `source_pages` (immutable,
   labelled with method + extractor). Worker job chained after verification (re-checks SHA-256 first):
   PDF text layer via pdfjs-dist 6.4.299 (fonts/XFA off, kept out of the Next bundle), TXT as page 1,
   scans/images → "Needs OCR" (nothing guessed). File list shows text status + Extract/Retry; page viewer;
   excerpt picker in the fact form (page text fetched by POST, never in URLs); fact cards show whether the
   excerpt appears in the cited page's extracted text. No external services.
-  Verified here: 103 DB tests, 105 unit tests, build, pdf.js run inside Next dev. **3 new E2E tests must run on your Mac.**
+  Verified here: 103 DB tests, 105 unit tests, build, pdf.js run inside Next dev.
+  Founder's Mac (2026-10-25): 37/37 E2E tests passed. DB tests on Mac: result not yet reported.
 
 ## Phases 3–5
 See the product brief. Not started.
